@@ -5,12 +5,12 @@
 
 char *read_from_file(char *file_name)
 {
-    char *file_content = malloc(50);
+    char *file_content = malloc(100*sizeof(char));
     FILE *fptr;
     fptr = fopen(file_name, "r");
     if (fptr != NULL)
     {
-        fgets(file_content, 50, fptr);
+        fgets(file_content, 100, fptr);
     }
     fclose(fptr);
     return file_content;
