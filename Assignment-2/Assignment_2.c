@@ -13,12 +13,20 @@ struct song_node
 
 struct song_node *root = NULL;
 
-void song_node_constructor(struct song_node a, char *n, struct song_node *p, struct song_node *l, struct song_node *r)
+void song_node_constructor(struct song_node *a, char *n, struct song_node *p, struct song_node *l, struct song_node *r)
 {
-    a.name = n;
-    a.parent = p;
-    a.left = l;
-    a.right = r;
+    a->name = n;
+    a->parent = p;
+    a->left = l;
+    a->right = r;
+}
+
+void song_node_name_init(struct song_node *a, char *n)
+{
+    a->name = n;
+    a->parent = NULL;
+    a->left = NULL;
+    a->right = NULL;
 }
 
 int is_root(struct song_node *a)
@@ -42,66 +50,61 @@ int is_leaf(struct song_node *a)
 void traverse_bst(struct song_node *a)
 {
     struct song_node *temp = a;
-    while (is_leaf(temp) != 0)
+
+    if (temp == NULL)
+    {
+        return;
+    }
+    else if (is_leaf(temp) == 1)
+    {
+        printf("%s : ", temp->name);
+    }
+    else
     {
         traverse_bst(temp->left);
         printf("%s : ", temp->name);
         traverse_bst(temp->right);
     }
-
-    printf("%s : ", temp->name);
 }
 
 void insert_bst(struct song_node *a)
 {
-    struct song_node *temp = a;
-    while (is_leaf(temp) != 0)
+    if (root != NULL)
     {
-        if (strcmpi(temp, a) < 0)
+        struct song_node *temp = root;
+        struct song_node *temp2 = root;
+        while (temp != NULL)
         {
-            temp = temp->right;
+            temp2 = temp;
+            if (strcmpi(temp->name, a->name) < 0)
+            {
+                temp = temp->right;
+            }
+            else
+            {
+                temp = temp->left;
+            }
+        }
+        if (strcmpi(temp2->name, a->name) < 0)
+        {
+            temp2->right = a;
         }
         else
         {
-            temp = temp->left;
+            temp2->left = a;
         }
-    }
-    if (strcmpi(temp, a) < 0)
-    {
-        temp->right = a;
-        temp->left = NULL;
     }
     else
     {
-        temp->left = a;
-        temp->right = NULL;
+        root = a;
     }
 }
 
 void delete_bst(struct song_node *a)
 {
     struct song_node *temp = a;
-    while (is_leaf(temp) != 0)
-    {
-        if (strcmpi(temp, a) < 0)
-        {
-            temp = temp->right;
-        }
-        else
-        {
-            temp = temp->left;
-        }
-    }
-    if (strcmpi(temp, a) < 0)
-    {
-        temp->right = NULL;
-    }
-    else
-    {
-        temp->left = NULL;
-    }
+    
 }
-
 
 char *read_from_file(char *file_name)
 {
@@ -116,8 +119,26 @@ char *read_from_file(char *file_name)
     return file_content;
 }
 
+void insertion_set()
+{
+    struct song_node a;
+    song_node_name_init(&a, "Closer");
+    insert_bst(&a);
+    struct song_node b;
+    song_node_name_init(&b, "Alone");
+    insert_bst(&b);
+    struct song_node c;
+    song_node_name_init(&c, "Believer");
+    insert_bst(&c);
+    struct song_node d;
+    song_node_name_init(&d, "Despacito");
+    insert_bst(&d);
+    traverse_bst(root);
+}
+
 int main()
 {
     printf("%s", read_from_file("songs.txt"));
+    insertion_set();
     return EXIT_SUCCESS;
 }
