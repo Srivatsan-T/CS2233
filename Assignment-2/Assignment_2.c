@@ -1,106 +1,51 @@
 #include <stdio.h>
-#include <conio.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct song_node
+struct song_node_
 {
-    char *name;
-    struct song_node *parent;
-    struct song_node *left;
-    struct song_node *right;
+    char name[15];
+    struct song_node_ *left, *right, *parent;
 };
 
-struct song_node *root = NULL;
+typedef struct song_node_ song_node;
 
-void song_node_constructor(struct song_node *a, char *n, struct song_node *p, struct song_node *l, struct song_node *r)
+void preorder_traversal(song_node *r)
 {
-    a->name = n;
-    a->parent = p;
-    a->left = l;
-    a->right = r;
-}
-
-void song_node_name_init(struct song_node *a, char *n)
-{
-    a->name = n;
-    a->parent = NULL;
-    a->left = NULL;
-    a->right = NULL;
-}
-
-int is_root(struct song_node *a)
-{
-    if (a->parent == NULL)
+    if (r != NULL)
     {
-        return 1;
-    }
-    return 0;
-}
-
-int is_leaf(struct song_node *a)
-{
-    if (a->left == NULL && a->right == NULL)
-    {
-        return 1;
-    }
-    return 0;
-}
-
-int number_children(struct song_node *a)
-{
-    int count = 0;
-    if (a->left != NULL)
-    {
-        count++;
-    }
-    if (a->right != NULL)
-    {
-        count++;
-    }
-    return count;
-}
-
-struct song_node * find_lowest(struct song_node *a)
-{
-    struct song_node *temp = a;
-    while(temp->left != NULL)
-    {
-        temp = temp->left;
-    }
-    return temp;
-}
-
-void traverse_bst(struct song_node *a)
-{
-    struct song_node *temp = a;
-
-    if (temp == NULL)
-    {
-        return;
-    }
-    else if (is_leaf(temp) == 1)
-    {
-        printf("%s : ", temp->name);
-    }
-    else
-    {
-        traverse_bst(temp->left);
-        printf("%s : ", temp->name);
-        traverse_bst(temp->right);
+        printf("%s : ", r->name);
+        preorder_traversal(r->left);
+        preorder_traversal(r->right);
     }
 }
 
-void insert_bst(struct song_node *a)
+void inorder_traversal(song_node *r)
 {
-    if (root != NULL)
+    if (r != NULL)
     {
-        struct song_node *temp = root;
-        struct song_node *temp2 = root;
+        inorder_traversal(r->left);
+        printf("%s : ", r->name);
+        inorder_traversal(r->right);
+    }
+}
+
+song_node *insert_bst(song_node *r, char new_name[])
+{
+    song_node *new_node = (song_node *)malloc(sizeof(song_node));
+    strcpy(new_node->name, new_name);
+    new_node->left = new_node->right = new_node->parent = NULL;
+
+    if (r != NULL)
+    {
+        song_node *temp = r;
+        song_node *temp2 = r;
+
         while (temp != NULL)
         {
             temp2 = temp;
-            if (strcmpi(temp->name, a->name) < 0)
+
+            if (strcmpi(temp->name, new_name) < 0)
             {
                 temp = temp->right;
             }
@@ -109,29 +54,24 @@ void insert_bst(struct song_node *a)
                 temp = temp->left;
             }
         }
-        if (strcmpi(temp2->name, a->name) < 0)
+        new_node->parent = temp2;
+        if (strcmpi(temp2->name, new_name) < 0)
         {
-            temp2->right = a;
+            temp2->right = new_node;
         }
         else
         {
-            temp2->left = a;
+            temp2->left = new_node;
         }
     }
-    else
-    {
-        root = a;
-    }
+    return new_node;
 }
 
-void delete_bst(char* n)
+song_node *search_bst(song_node *r, char n[])
 {
-    struct song_node *temp = root;
-    struct song_node *temp2 = root;
-
-    while (temp->name != n)
+    song_node *temp = r;
+    while (strcmpi(temp->name, n))
     {
-        temp2 = temp;
         if (strcmpi(temp->name, n) < 0)
         {
             temp = temp->right;
@@ -141,94 +81,109 @@ void delete_bst(char* n)
             temp = temp->left;
         }
     }
-    if (number_children(temp) == 0)
+    return temp;
+}
+
+song_node *find_successor(song_node *t)
+{
+    song_node *temp = t->right;
+    while (temp->left != NULL)
     {
-        if (strcmpi(temp2->name, n) < 0)
+        temp = temp->left;
+    }
+    return temp;
+}
+
+song_node *delete_bst(song_node *r, char old_name[])
+{
+    song_node *old_node = search_bst(r, old_name);
+    int parent_id;
+
+    if(old_node->parent == NULL)
+    {
+        parent_id = -1;
+    }
+    else if (old_node->parent->left == old_node)
+    {
+        parent_id = 0;
+    }
+    else
+    {
+        parent_id = 1;
+    }
+
+    if (old_node->left == NULL && old_node->right == NULL)
+    {
+        if (parent_id == 0)
         {
-            temp2->right = NULL;
+            old_node->parent->left = NULL;
         }
         else
         {
-            temp2->left = NULL;
+            old_node->parent->right = NULL;
         }
     }
 
-    else if (number_children(temp) == 1)
+    else if (old_node->left == NULL || old_node->right == NULL)
     {
-        struct song_node *child = NULL;
-        if (temp->right != NULL)
+        if (old_node->left != NULL)
         {
-            child = temp->right;
+            if (parent_id == 0)
+            {
+                old_node->parent->left = old_node->left;
+            }
+            else
+            {
+                old_node->parent->right = old_node->left;
+            }
         }
         else
         {
-            child = temp->left;
+            if (parent_id == 0)
+            {
+                old_node->parent->left = old_node->right;
+            }
+            else
+            {
+                old_node->parent->right = old_node->right;
+            }
         }
+    }
+    else
+    {
+        song_node *next_node = find_successor(old_node);
+        strcpy(old_node->name,next_node->name);
 
-        if (strcmpi(temp2->name, n) < 0)
+        if(next_node->parent->right = next_node)
         {
-            temp2->right = child;
+            next_node->parent->right = NULL;
         }
         else
         {
-            temp2->left = child;
+            next_node->parent->left = NULL;
         }
+        old_node = next_node;
     }
-
-    else if(number_children(temp) == 2)
-    {
-        char* temp_name;
-        struct song_node *succ = find_lowest(temp->right);
-        temp_name = succ->name;
-        delete_bst(succ->name);
-        temp->name = temp_name;
-    }
+    free(old_node);
 }
 
-char *read_from_file(char *file_name)
+song_node *insertion_set(song_node *r)
 {
-    char *file_content = malloc(100 * sizeof(char));
-    FILE *fptr;
-    fptr = fopen(file_name, "r");
-    if (fptr != NULL)
-    {
-        fgets(file_content, 100, fptr);
-    }
-    fclose(fptr);
-    return file_content;
+    r = insert_bst(r, "Closer");
+    insert_bst(r, "Alone");
+    insert_bst(r, "Believer");
+    insert_bst(r, "Despacito");
+    insert_bst(r, "Camila");
+    insert_bst(r,"Akira");
+    inorder_traversal(r);
+    return r;
 }
 
-void insertion_set()
-{
-    struct song_node a;
-    song_node_name_init(&a, "Closer");
-    insert_bst(&a);
-    struct song_node b;
-    song_node_name_init(&b, "Alone");
-    insert_bst(&b);
-    struct song_node c;
-    song_node_name_init(&c, "Believer");
-    insert_bst(&c);
-    struct song_node d;
-    song_node_name_init(&d, "Despacito");
-    insert_bst(&d);
-    struct song_node e;
-    song_node_name_init(&e, "Camila");
-    insert_bst(&e);
-    traverse_bst(root);
-}
-
-void deletion_set()
-{
-    delete_bst("Despacito");
-    traverse_bst(root);
-    delete_bst("Closer");
-    traverse_bst(root);
-}
 int main()
 {
-    printf("%s", read_from_file("songs.txt"));
-    insertion_set();
-    deletion_set();
+    song_node *root = NULL;
+    root = insertion_set(root);
+    delete_bst(root, "Alone");
+    inorder_traversal(root);
     return EXIT_SUCCESS;
 }
