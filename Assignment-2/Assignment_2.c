@@ -70,7 +70,7 @@ song_node *insert_bst(song_node *r, char new_name[])
 song_node *search_bst(song_node *r, char n[])
 {
     song_node *temp = r;
-    while (strcmpi(temp->name, n))
+    while (temp != NULL && strcmpi(temp->name, n))
     {
         if (strcmpi(temp->name, n) < 0)
         {
@@ -94,77 +94,87 @@ song_node *find_successor(song_node *t)
     return temp;
 }
 
-song_node *delete_bst(song_node *r, char old_name[])
+int delete_bst(song_node *r, char old_name[])
 {
     song_node *old_node = search_bst(r, old_name);
-    int parent_id;
-
-    if(old_node->parent == NULL)
+    if (old_node == NULL)
     {
-        parent_id = -1;
-    }
-    else if (old_node->parent->left == old_node)
-    {
-        parent_id = 0;
+        printf("Sorry but the song doesn't exist!\n");
+        return 0;
     }
     else
     {
-        parent_id = 1;
-    }
+        int parent_id;
 
-    if (old_node->left == NULL && old_node->right == NULL)
-    {
-        if (parent_id == 0)
+        if (old_node->parent == NULL)
         {
-            old_node->parent->left = NULL;
+            parent_id = -1;
+        }
+        else if (old_node->parent->left == old_node)
+        {
+            parent_id = 0;
         }
         else
         {
-            old_node->parent->right = NULL;
+            parent_id = 1;
         }
-    }
 
-    else if (old_node->left == NULL || old_node->right == NULL)
-    {
-        if (old_node->left != NULL)
+        if (old_node->left == NULL && old_node->right == NULL)
         {
             if (parent_id == 0)
             {
-                old_node->parent->left = old_node->left;
+                old_node->parent->left = NULL;
             }
             else
             {
-                old_node->parent->right = old_node->left;
+                old_node->parent->right = NULL;
             }
         }
-        else
-        {
-            if (parent_id == 0)
-            {
-                old_node->parent->left = old_node->right;
-            }
-            else
-            {
-                old_node->parent->right = old_node->right;
-            }
-        }
-    }
-    else
-    {
-        song_node *next_node = find_successor(old_node);
-        strcpy(old_node->name,next_node->name);
 
-        if(next_node->parent->right = next_node)
+        else if (old_node->left == NULL || old_node->right == NULL)
         {
-            next_node->parent->right = NULL;
+            if (old_node->left != NULL)
+            {
+                if (parent_id == 0)
+                {
+                    old_node->parent->left = old_node->left;
+                }
+                else
+                {
+                    old_node->parent->right = old_node->left;
+                }
+            }
+            else
+            {
+                if (parent_id == 0)
+                {
+                    old_node->parent->left = old_node->right;
+                }
+                else
+                {
+                    old_node->parent->right = old_node->right;
+                }
+            }
         }
         else
         {
-            next_node->parent->left = NULL;
+            song_node *next_node = find_successor(old_node);
+            strcpy(old_node->name, next_node->name);
+
+            if (next_node->parent->right = next_node)
+            {
+                next_node->parent->right = NULL;
+            }
+            else
+            {
+                next_node->parent->left = NULL;
+            }
+            old_node = next_node;
         }
-        old_node = next_node;
+        free(old_node);
+        printf("Song deleted!\n");
+        return 1;
     }
-    free(old_node);
 }
 
 song_node *insertion_set(song_node *r)
@@ -174,16 +184,54 @@ song_node *insertion_set(song_node *r)
     insert_bst(r, "Believer");
     insert_bst(r, "Despacito");
     insert_bst(r, "Camila");
-    insert_bst(r,"Akira");
+    insert_bst(r, "Akira");
     inorder_traversal(r);
+    return r;
+}
+
+char *read_from_file(char *file_name)
+{
+    char *file_content = malloc(50);
+    FILE *fptr;
+    fptr = fopen(file_name, "r");
+    if (fptr != NULL)
+    {
+        fgets(file_content, 50, fptr);
+    }
+    fclose(fptr);
+    return file_content;
+}
+
+song_node *pre_to_bst(song_node *r, char *songs_list)
+{
+    char *token = strtok(songs_list, ":");
+    char *temp_token;
+    int count = 0;
+    while (token != NULL)
+    {
+        temp_token = token;
+        printf(" %s\n", token);
+        token = strtok(NULL, ":");
+        if (count == 0)
+        {
+            r = insert_bst(r, temp_token);
+        }
+        else
+        {
+            insert_bst(r, temp_token);
+        }
+        count++;
+    }
     return r;
 }
 
 int main()
 {
+    char *songs = read_from_file("songs.txt");
     song_node *root = NULL;
-    root = insertion_set(root);
-    delete_bst(root, "Alone");
+    root = pre_to_bst(root, songs);
+    inorder_traversal(root);
+    delete_bst(root,"Despacito");
     inorder_traversal(root);
     return EXIT_SUCCESS;
 }
