@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 struct song_node_
 {
     char name[15];
     struct song_node_ *left, *right, *parent;
+    int h_diff;
 };
 
 typedef struct song_node_ song_node;
@@ -25,8 +27,40 @@ void inorder_traversal(song_node *r)
     if (r != NULL)
     {
         inorder_traversal(r->left);
-        printf("%s : ", r->name);
+        printf("%s(%d) : ", r->name, r->h_diff);
         inorder_traversal(r->right);
+    }
+}
+
+int find_height(song_node *a)
+{
+    if (a == NULL)
+    {
+        return 0;
+    }
+    else
+    {
+        int r = find_height(a->right);
+        int l = find_height(a->left);
+
+        if (r >= l)
+        {
+            return r + 1;
+        }
+        else
+        {
+            return l + 1;
+        }
+    }
+}
+
+void assign_hdiff(song_node *a)
+{
+    if(a != NULL)
+    {
+        assign_hdiff(a->left);
+        a->h_diff = find_height(a->left) - find_height(a->right);
+        assign_hdiff(a->right);
     }
 }
 
@@ -35,7 +69,6 @@ song_node *insert_bst(song_node *r, char new_name[])
     song_node *new_node = (song_node *)malloc(sizeof(song_node));
     strcpy(new_node->name, new_name);
     new_node->left = new_node->right = new_node->parent = NULL;
-
     if (r != NULL)
     {
         song_node *temp = r;
@@ -63,6 +96,11 @@ song_node *insert_bst(song_node *r, char new_name[])
         {
             temp2->left = new_node;
         }
+        assign_hdiff(r);
+    }
+    else
+    {
+        assign_hdiff(new_node);
     }
     return new_node;
 }
@@ -173,6 +211,7 @@ int delete_bst(song_node *r, char old_name[])
         }
         free(old_node);
         printf("Song deleted!\n");
+        assign_hdiff(r);
         return 1;
     }
 }
@@ -225,13 +264,19 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
     return r;
 }
 
+void avl_ins_rotations(song_node *new_node)
+{
+    
+}
+
+
 int main()
 {
     char *songs = read_from_file("songs.txt");
     song_node *root = NULL;
     root = pre_to_bst(root, songs);
     inorder_traversal(root);
-    delete_bst(root,"Despacito");
+    delete_bst(root, "Despacito");
     inorder_traversal(root);
     return EXIT_SUCCESS;
 }
