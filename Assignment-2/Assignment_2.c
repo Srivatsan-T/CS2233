@@ -56,12 +56,210 @@ int find_height(song_node *a)
 
 void assign_hdiff(song_node *a)
 {
-    if(a != NULL)
+    if (a != NULL)
     {
         assign_hdiff(a->left);
         a->h_diff = find_height(a->left) - find_height(a->right);
         assign_hdiff(a->right);
     }
+}
+
+song_node *ll_rot(song_node *r, song_node *t)
+{
+    song_node *gf = t;
+    song_node *f = t->left;
+    song_node *s = f->left;
+
+    song_node *f_right_old = f->right;
+    song_node *gf_parent_old = gf->parent;
+    if (gf == r)
+    {
+        r = f;
+    }
+    else
+    {
+        if (gf->parent->right = gf)
+        {
+            gf->parent->right = f;
+        }
+        else
+        {
+            gf->parent->left = f;
+        }
+    }
+    f->right = gf;
+    gf->parent = f;
+    f->parent = gf_parent_old;
+    gf->left = f_right_old;
+    return r;
+}
+
+song_node *rr_rot(song_node *r, song_node *t)
+{
+    song_node *gf = t;
+    song_node *f = t->right;
+    song_node *s = f->right;
+
+    song_node *f_left_old = f->left;
+    song_node *gf_parent_old = gf->parent;
+
+    if (gf == r)
+    {
+        r = f;
+    }
+    else
+    {
+        if (gf->parent->right = gf)
+        {
+            gf->parent->right = f;
+        }
+        else
+        {
+            gf->parent->left = f;
+        }
+    }
+    f->left = gf;
+    gf->parent = f;
+    f->parent = gf_parent_old;
+    gf->right = f_left_old;
+    return r;
+}
+
+song_node *lr_rot(song_node *r, song_node *t)
+{
+    song_node *gf = t;
+    song_node *f = t->left;
+    song_node *s = f->right;
+
+    song_node *s_left_old = s->left;
+    song_node *s_right_old = s->right;
+    song_node *gf_parent_old = gf->parent;
+
+    if (gf == r)
+    {
+        r = s;
+    }
+    else
+    {
+        if (gf->parent->left == gf)
+        {
+            gf->parent->left = s;
+        }
+        else
+        {
+            gf->parent->right = s;
+        }
+    }
+    s->parent = gf_parent_old;
+    s->left = f;
+    s->right = gf;
+    gf->parent = f->parent = s;
+    f->right = s_left_old;
+    gf->left = s_right_old;
+    return r;
+}
+
+song_node *rl_rot(song_node *r, song_node *t)
+{
+    song_node *gf = t;
+    song_node *f = t->right;
+    song_node *s = f->left;
+
+    song_node *s_left_old = s->left;
+    song_node *s_right_old = s->right;
+    song_node *gf_parent_old = gf->parent;
+    if (gf == r)
+    {
+        r = s;
+    }
+    else
+    {
+        if (gf->parent->left == gf)
+        {
+            gf->parent->left = s;
+        }
+        else
+        {
+            gf->parent->right = s;
+        }
+    }
+    s->parent = gf_parent_old;
+    s->right = f;
+    s->left = gf;
+    gf->parent = f->parent = s;
+    f->left = s_right_old;
+    gf->right = s_left_old;
+
+    return r;
+}
+
+song_node *avl_ins_rotations(song_node *root, song_node *new_node)
+{
+    song_node *temp = new_node;
+    while (temp != NULL)
+    {
+        if (abs(temp->h_diff) == 2)
+        {
+            if (temp->h_diff == 2 && temp->left->h_diff == 1)
+            {
+                root = ll_rot(root, temp);
+                break;
+            }
+            else if (temp->h_diff == 2 && temp->left->h_diff == -1)
+            {
+                root = lr_rot(root, temp);
+                break;
+            }
+            else if (temp->h_diff == -2 && temp->right->h_diff == -1)
+            {
+                root = rr_rot(root, temp);
+                break;
+            }
+            else if (temp->h_diff == -2 && temp->right->h_diff == 1)
+            {
+                root = rl_rot(root, temp);
+                break;
+            }
+        }
+        else
+        {
+            temp = temp->parent;
+        }
+    }
+    return root;
+}
+
+song_node *avl_del_rotations(song_node *root, song_node *old_parent)
+{
+    song_node *temp = old_parent;
+    while (temp != NULL)
+    {
+        if (abs(temp->h_diff) == 2)
+        {
+            if (temp->h_diff == 2 && temp->left->h_diff == 1)
+            {
+                root = ll_rot(root, temp);
+            }
+            else if (temp->h_diff == 2 && temp->left->h_diff == -1)
+            {
+                root = lr_rot(root, temp);
+            }
+            else if (temp->h_diff == -2 && temp->right->h_diff == -1)
+            {
+                root = rr_rot(root, temp);
+            }
+            else if (temp->h_diff == -2 && temp->right->h_diff == 1)
+            {
+                root = rl_rot(root, temp);
+            }
+            temp = temp->parent;
+        }
+        else
+        {
+            temp = temp->parent;
+        }
+    }
+    return root;
 }
 
 song_node *insert_bst(song_node *r, char new_name[])
@@ -97,12 +295,14 @@ song_node *insert_bst(song_node *r, char new_name[])
             temp2->left = new_node;
         }
         assign_hdiff(r);
+        r = avl_ins_rotations(r, new_node);
+        return r;
     }
     else
     {
         assign_hdiff(new_node);
+        return new_node;
     }
-    return new_node;
 }
 
 song_node *search_bst(song_node *r, char n[])
@@ -209,9 +409,10 @@ int delete_bst(song_node *r, char old_name[])
             }
             old_node = next_node;
         }
+        assign_hdiff(r);
+        r = avl_del_rotations(r, old_node->parent);
         free(old_node);
         printf("Song deleted!\n");
-        assign_hdiff(r);
         return 1;
     }
 }
@@ -245,30 +446,16 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
 {
     char *token = strtok(songs_list, ":");
     char *temp_token;
-    int count = 0;
     while (token != NULL)
     {
         temp_token = token;
-        printf(" %s\n", token);
+        // printf(" %s\n", token);
         token = strtok(NULL, ":");
-        if (count == 0)
-        {
-            r = insert_bst(r, temp_token);
-        }
-        else
-        {
-            insert_bst(r, temp_token);
-        }
-        count++;
+        r = insert_bst(r, temp_token);
+        printf("The root is now %s\n", r->name);
     }
     return r;
 }
-
-void avl_ins_rotations(song_node *new_node)
-{
-    
-}
-
 
 int main()
 {
@@ -276,7 +463,7 @@ int main()
     song_node *root = NULL;
     root = pre_to_bst(root, songs);
     inorder_traversal(root);
-    delete_bst(root, "Despacito");
-    inorder_traversal(root);
+    // delete_bst(root, "Despacito");
+    // inorder_traversal(root);
     return EXIT_SUCCESS;
 }
