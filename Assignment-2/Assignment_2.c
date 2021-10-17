@@ -90,6 +90,10 @@ song_node *ll_rot(song_node *r, song_node *t)
     f->right = gf;
     gf->parent = f;
     f->parent = gf_parent_old;
+    if (f_right_old != NULL)
+    {
+        f_right_old->parent = gf;
+    }
     gf->left = f_right_old;
     return r;
 }
@@ -121,6 +125,11 @@ song_node *rr_rot(song_node *r, song_node *t)
     f->left = gf;
     gf->parent = f;
     f->parent = gf_parent_old;
+    if (f_left_old != NULL)
+    {
+        f_left_old->parent = gf;
+    }
+
     gf->right = f_left_old;
     return r;
 }
@@ -154,6 +163,15 @@ song_node *lr_rot(song_node *r, song_node *t)
     s->left = f;
     s->right = gf;
     gf->parent = f->parent = s;
+    if (s_right_old != NULL)
+    {
+        s_left_old->parent = f;
+    }
+    if (s_right_old != NULL)
+    {
+        s_right_old->parent = gf;
+    }
+
     f->right = s_left_old;
     gf->left = s_right_old;
     return r;
@@ -187,6 +205,15 @@ song_node *rl_rot(song_node *r, song_node *t)
     s->right = f;
     s->left = gf;
     gf->parent = f->parent = s;
+    if (s_right_old != NULL)
+    {
+        s_right_old->parent = f;
+    }
+    if (s_left_old != NULL)
+    {
+        s_left_old->parent = gf;
+    }
+
     f->left = s_right_old;
     gf->right = s_left_old;
 
@@ -296,6 +323,7 @@ song_node *insert_bst(song_node *r, char new_name[])
         }
         assign_hdiff(r);
         r = avl_ins_rotations(r, new_node);
+        assign_hdiff(r);
         return r;
     }
     else
@@ -332,13 +360,14 @@ song_node *find_successor(song_node *t)
     return temp;
 }
 
-int delete_bst(song_node *r, char old_name[])
+song_node *delete_bst(song_node *r, char old_name[])
 {
     song_node *old_node = search_bst(r, old_name);
+    song_node *next;
     if (old_node == NULL)
     {
         printf("Sorry but the song doesn't exist!\n");
-        return 0;
+        return r;
     }
     else
     {
@@ -363,10 +392,16 @@ int delete_bst(song_node *r, char old_name[])
             {
                 old_node->parent->left = NULL;
             }
-            else
+            else if (parent_id == 1)
             {
                 old_node->parent->right = NULL;
             }
+            else
+            {
+                r = NULL;
+            }
+            next = old_node->parent;
+            free(old_node);
         }
 
         else if (old_node->left == NULL || old_node->right == NULL)
@@ -377,10 +412,17 @@ int delete_bst(song_node *r, char old_name[])
                 {
                     old_node->parent->left = old_node->left;
                 }
-                else
+                else if (parent_id == 1)
                 {
                     old_node->parent->right = old_node->left;
                 }
+                else
+                {
+                    r = old_node->left;
+                    r->parent = NULL;
+                }
+                old_node->left->parent = old_node->parent;
+                next = old_node->left;
             }
             else
             {
@@ -388,46 +430,38 @@ int delete_bst(song_node *r, char old_name[])
                 {
                     old_node->parent->left = old_node->right;
                 }
-                else
+                else if (parent_id == 1)
                 {
                     old_node->parent->right = old_node->right;
                 }
+                else
+                {
+                    r = old_node->right;
+                    r->parent = NULL;
+                }
+                next = old_node->right;
+                old_node->right->parent = old_node->parent;
             }
+            free(old_node);
         }
         else
         {
             song_node *next_node = find_successor(old_node);
-            strcpy(old_node->name, next_node->name);
-
-            if (next_node->parent->right = next_node)
-            {
-                next_node->parent->right = NULL;
-            }
-            else
-            {
-                next_node->parent->left = NULL;
-            }
-            old_node = next_node;
+            next = next_node->parent;
+            char next_name[20];
+            strcpy(next_name, next_node->name);
+            r = delete_bst(r, next_node->name);
+            strcpy(old_node->name, next_name);
         }
         assign_hdiff(r);
-        r = avl_del_rotations(r, old_node->parent);
-        free(old_node);
+
+        //r = avl_del_rotations(r, next);
         printf("Song deleted!\n");
-        return 1;
+        return r;
     }
 }
 
-song_node *insertion_set(song_node *r)
-{
-    r = insert_bst(r, "Closer");
-    insert_bst(r, "Alone");
-    insert_bst(r, "Believer");
-    insert_bst(r, "Despacito");
-    insert_bst(r, "Camila");
-    insert_bst(r, "Akira");
-    inorder_traversal(r);
-    return r;
-}
+
 
 char *read_from_file(char *file_name)
 {
@@ -452,9 +486,32 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
         // printf(" %s\n", token);
         token = strtok(NULL, ":");
         r = insert_bst(r, temp_token);
-        printf("The root is now %s\n", r->name);
     }
     return r;
+}
+
+void print_node_details(song_node *root)
+{
+    song_node *temp = root;
+    if (temp != NULL)
+    {
+        print_node_details(temp->left);
+        printf("Node :%s ", temp->name);
+        if (temp->left != NULL)
+        {
+            printf("with left as %s ", temp->left->name);
+        }
+        if (temp->right != NULL)
+        {
+            printf("with right as %s ", temp->right->name);
+        }
+        if (temp->parent != NULL)
+        {
+            printf("with parent %s ", temp->parent->name);
+        }
+        print_node_details(temp->right);
+    }
+    printf("\n");
 }
 
 int main()
@@ -463,7 +520,7 @@ int main()
     song_node *root = NULL;
     root = pre_to_bst(root, songs);
     inorder_traversal(root);
-    // delete_bst(root, "Despacito");
-    // inorder_traversal(root);
+    root = delete_bst(root, "Despacito");
+    print_node_details(root);
     return EXIT_SUCCESS;
 }
