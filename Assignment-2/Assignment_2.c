@@ -7,10 +7,18 @@ struct song_node_
 {
     char name[15];
     struct song_node_ *left, *right, *parent;
-    int h_diff;
+    int height;
 };
 
 typedef struct song_node_ song_node;
+
+struct song_linked_list_node_
+{
+    char name[15];
+    struct song_linked_list_node_ *next;
+};
+
+typedef struct song_linked_list_node_ song_linked_list_node;
 
 void preorder_traversal(song_node *r)
 {
@@ -27,7 +35,7 @@ void inorder_traversal(song_node *r)
     if (r != NULL)
     {
         inorder_traversal(r->left);
-        printf("%s(%d) : ", r->name, r->h_diff);
+        printf("%s(%d) : ", r->name, r->height);
         inorder_traversal(r->right);
     }
 }
@@ -54,6 +62,17 @@ int find_height(song_node *a)
     }
 }
 
+void height_node_to_root(song_node *a)
+{
+    song_node *temp = a;
+    while (temp != NULL)
+    {
+        temp->height = find_height(temp);
+        temp = temp->parent;
+    }
+}
+
+/*
 void assign_hdiff(song_node *a)
 {
     if (a != NULL)
@@ -63,6 +82,7 @@ void assign_hdiff(song_node *a)
         assign_hdiff(a->right);
     }
 }
+*/
 
 song_node *ll_rot(song_node *r, song_node *t)
 {
@@ -95,6 +115,10 @@ song_node *ll_rot(song_node *r, song_node *t)
         f_right_old->parent = gf;
     }
     gf->left = f_right_old;
+
+    gf->height = find_height(gf);
+    f->height = find_height(f);
+
     return r;
 }
 
@@ -131,6 +155,9 @@ song_node *rr_rot(song_node *r, song_node *t)
     }
 
     gf->right = f_left_old;
+
+    gf->height = find_height(gf);
+    f->height = find_height(f);
     return r;
 }
 
@@ -174,6 +201,10 @@ song_node *lr_rot(song_node *r, song_node *t)
 
     f->right = s_left_old;
     gf->left = s_right_old;
+
+    gf->height = find_height(gf);
+    f->height = find_height(f);
+    s->height = find_height(s);
     return r;
 }
 
@@ -217,32 +248,41 @@ song_node *rl_rot(song_node *r, song_node *t)
     f->left = s_right_old;
     gf->right = s_left_old;
 
+    gf->height = find_height(gf);
+    f->height = find_height(f);
+    s->height = find_height(s);
     return r;
+}
+
+int find_h_diff(song_node *t)
+{
+    return find_height(t->left) - find_height(t->right);
 }
 
 song_node *avl_ins_rotations(song_node *root, song_node *new_node)
 {
     song_node *temp = new_node;
+    int h_diff;
     while (temp != NULL)
     {
-        if (abs(temp->h_diff) == 2)
+        if (abs(find_h_diff(temp)) == 2)
         {
-            if (temp->h_diff == 2 && temp->left->h_diff == 1)
+            if (find_h_diff(temp) == 2 && find_h_diff(temp->left) == 1)
             {
                 root = ll_rot(root, temp);
                 break;
             }
-            else if (temp->h_diff == 2 && temp->left->h_diff == -1)
+            else if (find_h_diff(temp) == 2 && find_h_diff(temp->left) == -1)
             {
                 root = lr_rot(root, temp);
                 break;
             }
-            else if (temp->h_diff == -2 && temp->right->h_diff == -1)
+            else if (find_h_diff(temp) == -2 && find_h_diff(temp->right) == -1)
             {
                 root = rr_rot(root, temp);
                 break;
             }
-            else if (temp->h_diff == -2 && temp->right->h_diff == 1)
+            else if (find_h_diff(temp) == -2 && find_h_diff(temp->right) == 1)
             {
                 root = rl_rot(root, temp);
                 break;
@@ -261,21 +301,21 @@ song_node *avl_del_rotations(song_node *root, song_node *old_parent)
     song_node *temp = old_parent;
     while (temp != NULL)
     {
-        if (abs(temp->h_diff) == 2)
+        if (abs(find_h_diff(temp)) == 2)
         {
-            if (temp->h_diff == 2 && temp->left->h_diff == 1)
+            if (find_h_diff(temp) == 2 && find_h_diff(temp->left) == 1)
             {
                 root = ll_rot(root, temp);
             }
-            else if (temp->h_diff == 2 && temp->left->h_diff == -1)
+            else if (find_h_diff(temp) == 2 && find_h_diff(temp->left) == -1)
             {
                 root = lr_rot(root, temp);
             }
-            else if (temp->h_diff == -2 && temp->right->h_diff == -1)
+            else if (find_h_diff(temp) == -2 && find_h_diff(temp->right) == -1)
             {
                 root = rr_rot(root, temp);
             }
-            else if (temp->h_diff == -2 && temp->right->h_diff == 1)
+            else if (find_h_diff(temp) == -2 && find_h_diff(temp->right) == 1)
             {
                 root = rl_rot(root, temp);
             }
@@ -285,11 +325,12 @@ song_node *avl_del_rotations(song_node *root, song_node *old_parent)
         {
             temp = temp->parent;
         }
+        // assign_hdiff(root);
     }
     return root;
 }
 
-song_node *insert_bst(song_node *r, char new_name[])
+song_node *insert_bst(song_node *r, char new_name[], int choice)
 {
     song_node *new_node = (song_node *)malloc(sizeof(song_node));
     strcpy(new_node->name, new_name);
@@ -321,14 +362,20 @@ song_node *insert_bst(song_node *r, char new_name[])
         {
             temp2->left = new_node;
         }
-        assign_hdiff(r);
-        r = avl_ins_rotations(r, new_node);
-        assign_hdiff(r);
+        if (choice == 1)
+        {
+            new_node->height = 0;
+            height_node_to_root(new_node);
+            // assign_hdiff(r);
+            r = avl_ins_rotations(r, new_node);
+            // assign_hdiff(r);
+        }
         return r;
     }
     else
     {
-        assign_hdiff(new_node);
+        new_node->height = 0;
+        // assign_hdiff(new_node);
         return new_node;
     }
 }
@@ -360,7 +407,7 @@ song_node *find_successor(song_node *t)
     return temp;
 }
 
-song_node *delete_bst(song_node *r, char old_name[])
+song_node *delete_bst(song_node *r, char old_name[], int choice)
 {
     song_node *old_node = search_bst(r, old_name);
     song_node *next;
@@ -422,7 +469,6 @@ song_node *delete_bst(song_node *r, char old_name[])
                     r->parent = NULL;
                 }
                 old_node->left->parent = old_node->parent;
-                next = old_node->left;
             }
             else
             {
@@ -439,9 +485,9 @@ song_node *delete_bst(song_node *r, char old_name[])
                     r = old_node->right;
                     r->parent = NULL;
                 }
-                next = old_node->right;
                 old_node->right->parent = old_node->parent;
             }
+            next = old_node->parent;
             free(old_node);
         }
         else
@@ -450,27 +496,28 @@ song_node *delete_bst(song_node *r, char old_name[])
             next = next_node->parent;
             char next_name[20];
             strcpy(next_name, next_node->name);
-            r = delete_bst(r, next_node->name);
+            r = delete_bst(r, next_node->name, choice);
             strcpy(old_node->name, next_name);
         }
-        assign_hdiff(r);
-
-        //r = avl_del_rotations(r, next);
+        if (choice == 1)
+        {
+            height_node_to_root(next);
+            // assign_hdiff(r);
+            r = avl_del_rotations(r, next);
+        }
         printf("Song deleted!\n");
         return r;
     }
 }
 
-
-
 char *read_from_file(char *file_name)
 {
-    char *file_content = malloc(50);
+    char *file_content = malloc(1000);
     FILE *fptr;
     fptr = fopen(file_name, "r");
     if (fptr != NULL)
     {
-        fgets(file_content, 50, fptr);
+        fgets(file_content, 1000, fptr);
     }
     fclose(fptr);
     return file_content;
@@ -485,7 +532,7 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
         temp_token = token;
         // printf(" %s\n", token);
         token = strtok(NULL, ":");
-        r = insert_bst(r, temp_token);
+        r = insert_bst(r, temp_token, 0);
     }
     return r;
 }
@@ -518,9 +565,84 @@ int main()
 {
     char *songs = read_from_file("songs.txt");
     song_node *root = NULL;
+    song_node *root_avl = NULL;
     root = pre_to_bst(root, songs);
+    printf("The songs in the library are\n");
     inorder_traversal(root);
-    root = delete_bst(root, "Despacito");
+    printf("\n");
     print_node_details(root);
+    char del_choice;
+    printf("Do you want to delete nodes from the library? (y/n) ");
+    scanf(" %c", &del_choice);
+    while (del_choice == 'y')
+    {
+        char del_song[15];
+        printf("Enter the song you want to delete \n");
+        scanf("%s", &del_song);
+        song_node *temp_song = search_bst(root, del_song);
+        if (temp_song != NULL)
+        {
+            root = delete_bst(root, del_song, 0);
+        }
+        else
+        {
+            printf("Sorry but the song entered was not in the library! \n");
+        }
+
+        printf("Do you want to delete nodes from the library? (y/n) ");
+        scanf(" %c", &del_choice);
+    }
+    printf("The songs in library are now \n");
+    inorder_traversal(root);
+    printf("\n");
+    printf("Library is now customised time to create a playlist you love! \n");
+    char ins_choice;
+    printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
+    scanf(" %c", &ins_choice);
+    while (ins_choice == 'y')
+    {
+        char ins_song[15];
+        printf("Enter the song you want to enter \n");
+        scanf("%s", &ins_song);
+        song_node *temp_song = search_bst(root, ins_song);
+        if (temp_song == NULL)
+        {
+            printf("Sorry but the song is not in the library!\n ");
+        }
+        else
+        {
+            root = delete_bst(root, ins_song, 0);
+            root_avl = insert_bst(root_avl, ins_song, 1);
+        }
+        printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
+        scanf(" %c", &ins_choice);
+    }
+    printf("The songs in the playlist are\n");
+    inorder_traversal(root_avl);
+    printf("\n");
+    char del_playlist;
+    printf("Do you want to delete songs from the playlist? (y/n) ");
+    scanf(" %c", &del_playlist);
+    while (del_playlist == 'y')
+    {
+        char del_song[15];
+        printf("Enter the song you want to delete \n");
+        scanf("%s",&del_song);
+        song_node *temp_song = search_bst(root_avl,del_song);
+        if(temp_song == NULL)
+        {
+            printf("Sorry but the song is not present in the playlist \n");
+        }
+        else
+        {
+            root_avl = delete_bst(root_avl,del_song,1);
+        }
+        printf("Do you want to delete more songs from the playlist? (y/n) ");
+        scanf(" %c",&del_playlist);
+    }
+
+    printf("Now lets start the playlist and listen to some music! \n");
+    
+    inorder_traversal(root);
     return EXIT_SUCCESS;
 }
