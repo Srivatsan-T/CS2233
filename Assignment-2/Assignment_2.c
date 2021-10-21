@@ -20,6 +20,44 @@ struct song_linked_list_node_
 
 typedef struct song_linked_list_node_ song_linked_list_node;
 
+song_linked_list_node *insert_stack(song_linked_list_node *t, song_linked_list_node *new_node)
+{
+    new_node->next = t;
+    return new_node;
+}
+
+song_linked_list_node *delete_stack(song_linked_list_node *t)
+{
+    song_linked_list_node *temp = t;
+    if (temp != NULL)
+    {
+        temp = temp->next;
+    }
+    return temp;
+}
+
+song_linked_list_node *insert_queue(song_linked_list_node *t, song_linked_list_node *new_node)
+{
+    song_linked_list_node *temp = t;
+    while (temp->next->next != NULL)
+    {
+        temp = temp->next;
+    }
+    song_linked_list_node *temp2 = temp->next;
+    temp->next = NULL;
+    return temp2;
+}
+
+song_linked_list_node *delete_queue(song_linked_list_node *t)
+{
+    song_linked_list_node *temp = t;
+    if(temp != NULL)
+    {
+        temp = temp->next;
+    }
+    return temp;
+}
+
 void preorder_traversal(song_node *r)
 {
     if (r != NULL)
@@ -40,6 +78,18 @@ void inorder_traversal(song_node *r)
     }
 }
 
+song_node *get_least(song_node *r)
+{
+    song_node *temp = r;
+    song_node *temp2 = temp;
+    while (temp != NULL)
+    {
+        temp2 = temp;
+        temp = temp->left;
+    }
+    return temp2;
+}
+
 int find_height(song_node *a)
 {
     if (a == NULL)
@@ -48,9 +98,23 @@ int find_height(song_node *a)
     }
     else
     {
-        int r = find_height(a->right);
-        int l = find_height(a->left);
-
+        int r, l;
+        if (a->right == NULL)
+        {
+            r = 0;
+        }
+        else
+        {
+            r = a->right->height;
+        }
+        if (a->left == NULL)
+        {
+            l = 0;
+        }
+        else
+        {
+            l = a->left->height;
+        }
         if (r >= l)
         {
             return r + 1;
@@ -86,6 +150,7 @@ void assign_hdiff(song_node *a)
 
 song_node *ll_rot(song_node *r, song_node *t)
 {
+    // printf("ll rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->left;
     song_node *s = f->left;
@@ -124,6 +189,7 @@ song_node *ll_rot(song_node *r, song_node *t)
 
 song_node *rr_rot(song_node *r, song_node *t)
 {
+    // printf("rr rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->right;
     song_node *s = f->right;
@@ -163,6 +229,7 @@ song_node *rr_rot(song_node *r, song_node *t)
 
 song_node *lr_rot(song_node *r, song_node *t)
 {
+    // printf("lr rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->left;
     song_node *s = f->right;
@@ -210,6 +277,7 @@ song_node *lr_rot(song_node *r, song_node *t)
 
 song_node *rl_rot(song_node *r, song_node *t)
 {
+    // printf("rl rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->right;
     song_node *s = f->left;
@@ -325,6 +393,7 @@ song_node *avl_del_rotations(song_node *root, song_node *old_parent)
         {
             temp = temp->parent;
         }
+        height_node_to_root(temp);
         // assign_hdiff(root);
     }
     return root;
@@ -364,7 +433,7 @@ song_node *insert_bst(song_node *r, char new_name[], int choice)
         }
         if (choice == 1)
         {
-            new_node->height = 0;
+            new_node->height = 1;
             height_node_to_root(new_node);
             // assign_hdiff(r);
             r = avl_ins_rotations(r, new_node);
@@ -374,7 +443,7 @@ song_node *insert_bst(song_node *r, char new_name[], int choice)
     }
     else
     {
-        new_node->height = 0;
+        new_node->height = 1;
         // assign_hdiff(new_node);
         return new_node;
     }
@@ -532,9 +601,18 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
         temp_token = token;
         // printf(" %s\n", token);
         token = strtok(NULL, ":");
-        r = insert_bst(r, temp_token, 0);
+        r = insert_bst(r, temp_token, 1);
     }
     return r;
+}
+
+song_linked_list_node *temp_queue_to_recent_stack(song_linked_list_node *top, song_linked_list_node *front)
+{
+    while (front != NULL)
+    {
+        insert_stack(top, delete_queue(front));
+    }
+    return top;
 }
 
 void print_node_details(song_node *root)
@@ -566,11 +644,14 @@ int main()
     char *songs = read_from_file("songs.txt");
     song_node *root = NULL;
     song_node *root_avl = NULL;
+    song_linked_list_node *temp_queue_front = NULL;
+    song_linked_list_node *temp_queue_rear = NULL;
+    song_linked_list_node *recents_stack_top = NULL;
     root = pre_to_bst(root, songs);
     printf("The songs in the library are\n");
     inorder_traversal(root);
     printf("\n");
-    print_node_details(root);
+    // print_node_details(root);
     char del_choice;
     printf("Do you want to delete nodes from the library? (y/n) ");
     scanf(" %c", &del_choice);
@@ -627,22 +708,68 @@ int main()
     {
         char del_song[15];
         printf("Enter the song you want to delete \n");
-        scanf("%s",&del_song);
-        song_node *temp_song = search_bst(root_avl,del_song);
-        if(temp_song == NULL)
+        scanf("%s", &del_song);
+        song_node *temp_song = search_bst(root_avl, del_song);
+        if (temp_song == NULL)
         {
             printf("Sorry but the song is not present in the playlist \n");
         }
         else
         {
-            root_avl = delete_bst(root_avl,del_song,1);
+            root_avl = delete_bst(root_avl, del_song, 1);
         }
         printf("Do you want to delete more songs from the playlist? (y/n) ");
-        scanf(" %c",&del_playlist);
+        scanf(" %c", &del_playlist);
     }
-
+    print_node_details(root_avl);
     printf("Now lets start the playlist and listen to some music! \n");
-    
-    inorder_traversal(root);
+    char choice[4];
+    printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+    scanf("%s", &choice);
+    while (1)
+    {
+        if (strcmpi(choice, "n") == 0)
+        {
+            if (root_avl == NULL)
+            {
+                printf("Sorry you've reached the end of playlist\n");
+            }
+            else
+            {
+                song_linked_list_node *new_node = malloc(sizeof(song_linked_list_node));
+                strcpy(new_node->name, get_least(root_avl)->name);
+                root_avl = delete_bst(root_avl, new_node->name, 1);
+                printf("Playing %s \n", new_node->name);
+                recents_stack_top = insert_stack(recents_stack_top, new_node);
+            }
+        }
+        else if (choice[0] == 'p' && choice[1] == ':' && atoi(choice + 2) != 0)
+        {
+            int k = atoi(choice + 2);
+            for (unsigned i = 0; i < k; i++)
+            {
+                if (recents_stack_top == NULL)
+                {
+                    printf("Sorry but there weren't %d recent songs\n", k);
+                }
+                else
+                {
+                    song_linked_list_node *popped = recents_stack_top;
+                    recents_stack_top = delete_stack(recents_stack_top);
+                    printf("Playing %s \n", popped->name);
+                    insert_queue(temp_queue_front, popped);
+                }
+            }
+            recents_stack_top = temp_queue_to_recent_stack(recents_stack_top, temp_queue_front);
+        }
+        else if (strcmpi(choice, "e") == 0)
+        {
+            printf("Bye!\n");
+            break;
+        }
+        printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+        scanf("%s", &choice);
+    }
+    // print_node_details(root);
     return EXIT_SUCCESS;
 }
