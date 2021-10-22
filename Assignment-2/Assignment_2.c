@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 
+// The struct used for both BST and AVL trees
 struct song_node_
 {
     char name[15];
@@ -12,6 +13,7 @@ struct song_node_
 
 typedef struct song_node_ song_node;
 
+// Struct used for stacks and queues once the playlist starts
 struct song_linked_list_node_
 {
     char name[15];
@@ -20,44 +22,99 @@ struct song_linked_list_node_
 
 typedef struct song_linked_list_node_ song_linked_list_node;
 
-song_linked_list_node *insert_stack(song_linked_list_node *t, song_linked_list_node *new_node)
+song_linked_list_node *temp_queue_front = NULL;
+song_linked_list_node *temp_queue_rear = NULL;
+song_linked_list_node *recents_stack_top = NULL;
+
+// Function to insert into the stack whose top is a global variable
+void insert_stack(song_linked_list_node *new_node)
 {
-    new_node->next = t;
-    return new_node;
+    if (recents_stack_top == NULL)
+    {
+        new_node->next = NULL;
+        recents_stack_top = new_node;
+    }
+    else
+    {
+        new_node->next = recents_stack_top;
+        recents_stack_top = new_node;
+    }
 }
 
-song_linked_list_node *delete_stack(song_linked_list_node *t)
+// Function to delete an element from the temporary stack
+song_linked_list_node *delete_stack()
+{
+    if (recents_stack_top == NULL)
+    {
+        return recents_stack_top;
+    }
+    else if (recents_stack_top->next == NULL)
+    {
+        song_linked_list_node *temp_node = recents_stack_top;
+        recents_stack_top = NULL;
+        return temp_node;
+    }
+    else
+    {
+        song_linked_list_node *temp_node = recents_stack_top;
+        recents_stack_top = recents_stack_top->next;
+        return temp_node;
+    }
+}
+
+// Function to print contents of the linked list
+// Since stack and queue use the same struct it can be used for both of them
+void print_linked_list(song_linked_list_node *t)
 {
     song_linked_list_node *temp = t;
-    if (temp != NULL)
+    while (temp != NULL)
     {
+        printf("%s : ", temp->name);
         temp = temp->next;
     }
-    return temp;
+    printf("\n");
 }
 
-song_linked_list_node *insert_queue(song_linked_list_node *t, song_linked_list_node *new_node)
+// Function to insert an element into the queue
+void insert_queue(song_linked_list_node *new_node)
 {
-    song_linked_list_node *temp = t;
-    while (temp->next->next != NULL)
+    if (temp_queue_rear == NULL)
     {
-        temp = temp->next;
+        temp_queue_front = temp_queue_rear = new_node;
+        new_node->next = NULL;
     }
-    song_linked_list_node *temp2 = temp->next;
-    temp->next = NULL;
-    return temp2;
+    else
+    {
+        temp_queue_rear->next = new_node;
+        temp_queue_rear = new_node;
+        new_node->next = NULL;
+    }
 }
 
-song_linked_list_node *delete_queue(song_linked_list_node *t)
+// Function to delete an element from the queue and return the deleted element
+song_linked_list_node *delete_queue()
 {
-    song_linked_list_node *temp = t;
-    if(temp != NULL)
+    if (temp_queue_front == NULL)
     {
-        temp = temp->next;
+        return temp_queue_front;
     }
-    return temp;
+    else if (temp_queue_front == temp_queue_rear)
+    {
+        song_linked_list_node *temp_node = temp_queue_rear;
+        temp_queue_front = temp_queue_rear = NULL;
+        return temp_node;
+    }
+    else
+    {
+        song_linked_list_node *temp_node = temp_queue_front;
+        temp_queue_front = temp_queue_front->next;
+        return temp_node;
+    }
 }
 
+// Function to print the pre-order list of a binary search tree
+// Can also be used for an AVL tree since they both use the same struct
+// This function isn't used in the main program but can be useful for debugging
 void preorder_traversal(song_node *r)
 {
     if (r != NULL)
@@ -68,16 +125,20 @@ void preorder_traversal(song_node *r)
     }
 }
 
+// Function to print the in-order list of a binary search tree
+// or an AVL tree since they use the same struct
 void inorder_traversal(song_node *r)
 {
     if (r != NULL)
     {
         inorder_traversal(r->left);
-        printf("%s(%d) : ", r->name, r->height);
+        printf("%s : ", r->name);
         inorder_traversal(r->right);
     }
 }
 
+// Function to get the least element from a binary search tree
+// This is used to traverse the AVL playlist
 song_node *get_least(song_node *r)
 {
     song_node *temp = r;
@@ -90,6 +151,9 @@ song_node *get_least(song_node *r)
     return temp2;
 }
 
+// Function to return the height of a node in an AVL treee
+// The function does it by getting the heights of the left and right of the node
+// finds out what is more and assigns 1 more to the given node
 int find_height(song_node *a)
 {
     if (a == NULL)
@@ -126,6 +190,8 @@ int find_height(song_node *a)
     }
 }
 
+// Function which updates the height of the nodes from song_node a
+// to the root of the AVL tree
 void height_node_to_root(song_node *a)
 {
     song_node *temp = a;
@@ -136,21 +202,11 @@ void height_node_to_root(song_node *a)
     }
 }
 
-/*
-void assign_hdiff(song_node *a)
-{
-    if (a != NULL)
-    {
-        assign_hdiff(a->left);
-        a->h_diff = find_height(a->left) - find_height(a->right);
-        assign_hdiff(a->right);
-    }
-}
-*/
-
+// Function to perform a ll rotation in an AVL tree with root r
+// and t being the node with imbalance.
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation
 song_node *ll_rot(song_node *r, song_node *t)
 {
-    // printf("ll rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->left;
     song_node *s = f->left;
@@ -187,9 +243,11 @@ song_node *ll_rot(song_node *r, song_node *t)
     return r;
 }
 
+// Function to perform a rr rotation in an AVL tree with root r
+// and t being the node with imbalance.
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation
 song_node *rr_rot(song_node *r, song_node *t)
 {
-    // printf("rr rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->right;
     song_node *s = f->right;
@@ -227,9 +285,11 @@ song_node *rr_rot(song_node *r, song_node *t)
     return r;
 }
 
+// Function to perform a lr rotation in an AVL tree with root r
+// and t being the node with imbalance.
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation
 song_node *lr_rot(song_node *r, song_node *t)
 {
-    // printf("lr rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->left;
     song_node *s = f->right;
@@ -275,9 +335,11 @@ song_node *lr_rot(song_node *r, song_node *t)
     return r;
 }
 
+// Function to perform a rl rotation in an AVL tree with root r
+// and t being the node with imbalance.
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation
 song_node *rl_rot(song_node *r, song_node *t)
 {
-    // printf("rl rot with %s\n", t->name);
     song_node *gf = t;
     song_node *f = t->right;
     song_node *s = f->left;
@@ -322,11 +384,16 @@ song_node *rl_rot(song_node *r, song_node *t)
     return r;
 }
 
+// Function used to return the height difference of a node by returning the
+// difference of its left and right node heights.
 int find_h_diff(song_node *t)
 {
     return find_height(t->left) - find_height(t->right);
 }
 
+// Function which handles the AVL rotation in insertion cases.
+// The function goes through the tree from new node to root and searches for the node with imbalance
+// It then finds the kind of imbalance and performs the correct rotation algo.
 song_node *avl_ins_rotations(song_node *root, song_node *new_node)
 {
     song_node *temp = new_node;
@@ -364,6 +431,10 @@ song_node *avl_ins_rotations(song_node *root, song_node *new_node)
     return root;
 }
 
+// Function which handles the AVL rotation in deletion cases.
+// The function goes through the tree from new node to root and searches for the node with imbalance
+// It then finds the kind of imbalance and performs the correct rotation algo.
+// Moreover this function doesn't stop with one rotation and continues it till it reaches the root.
 song_node *avl_del_rotations(song_node *root, song_node *old_parent)
 {
     song_node *temp = old_parent;
@@ -394,11 +465,14 @@ song_node *avl_del_rotations(song_node *root, song_node *old_parent)
             temp = temp->parent;
         }
         height_node_to_root(temp);
-        // assign_hdiff(root);
     }
     return root;
 }
 
+// Function to insert elements into a BST or an AVL tree.
+// Argument choice is used to distinguish between avl trees and regular bst
+// since their insertion algo is same for the most part with avl trees needing
+// rotations after regular bst's insertion routine
 song_node *insert_bst(song_node *r, char new_name[], int choice)
 {
     song_node *new_node = (song_node *)malloc(sizeof(song_node));
@@ -435,20 +509,19 @@ song_node *insert_bst(song_node *r, char new_name[], int choice)
         {
             new_node->height = 1;
             height_node_to_root(new_node);
-            // assign_hdiff(r);
             r = avl_ins_rotations(r, new_node);
-            // assign_hdiff(r);
         }
         return r;
     }
     else
     {
         new_node->height = 1;
-        // assign_hdiff(new_node);
         return new_node;
     }
 }
 
+// Function to search for an element in trees and return the node
+// The function takes in the song's name and returns NULL if it doesn't exist in the tree
 song_node *search_bst(song_node *r, char n[])
 {
     song_node *temp = r;
@@ -466,6 +539,8 @@ song_node *search_bst(song_node *r, char n[])
     return temp;
 }
 
+// Function to return the successor node to a given node in a tree.
+// Used in deletion function for deleting nodes with 2 children
 song_node *find_successor(song_node *t)
 {
     song_node *temp = t->right;
@@ -476,6 +551,10 @@ song_node *find_successor(song_node *t)
     return temp;
 }
 
+// Function to delete elements into a BST or an AVL tree.
+// Argument choice is used to distinguish between avl trees and regular bst
+// since their deletion algo is same for the most part with avl trees needing
+// rotations after regular bst's deletion routine
 song_node *delete_bst(song_node *r, char old_name[], int choice)
 {
     song_node *old_node = search_bst(r, old_name);
@@ -571,14 +650,14 @@ song_node *delete_bst(song_node *r, char old_name[], int choice)
         if (choice == 1)
         {
             height_node_to_root(next);
-            // assign_hdiff(r);
             r = avl_del_rotations(r, next);
         }
-        printf("Song deleted!\n");
+        // printf("Song deleted!\n");
         return r;
     }
 }
 
+// Function to read a txt file and return its content in a string
 char *read_from_file(char *file_name)
 {
     char *file_content = malloc(1000);
@@ -592,6 +671,9 @@ char *read_from_file(char *file_name)
     return file_content;
 }
 
+// Function to split the string returned by read_from_file using the delimeter
+//  ':' and inserting the individual songs into a bst. This becomes our song library
+// to choose songs for playlist from
 song_node *pre_to_bst(song_node *r, char *songs_list)
 {
     char *token = strtok(songs_list, ":");
@@ -599,22 +681,24 @@ song_node *pre_to_bst(song_node *r, char *songs_list)
     while (token != NULL)
     {
         temp_token = token;
-        // printf(" %s\n", token);
         token = strtok(NULL, ":");
         r = insert_bst(r, temp_token, 1);
     }
     return r;
 }
 
-song_linked_list_node *temp_queue_to_recent_stack(song_linked_list_node *top, song_linked_list_node *front)
+// Function to transfer content from the queue to the recent stack
+void temp_queue_to_recent_stack()
 {
-    while (front != NULL)
+    while (temp_queue_front != NULL)
     {
-        insert_stack(top, delete_queue(front));
+        insert_stack(delete_queue());
     }
-    return top;
 }
 
+// Function to print the node details for all the nodes in a bst.
+// The function isn't used in the main program but can be used for debugging purposes to see if the nodes
+// properly arranged
 void print_node_details(song_node *root)
 {
     song_node *temp = root;
@@ -639,19 +723,12 @@ void print_node_details(song_node *root)
     printf("\n");
 }
 
-int main()
+//Function to delete songs from the main library given to us from the .txt file
+song_node *customise_library(song_node *root)
 {
-    char *songs = read_from_file("songs.txt");
-    song_node *root = NULL;
-    song_node *root_avl = NULL;
-    song_linked_list_node *temp_queue_front = NULL;
-    song_linked_list_node *temp_queue_rear = NULL;
-    song_linked_list_node *recents_stack_top = NULL;
-    root = pre_to_bst(root, songs);
     printf("The songs in the library are\n");
     inorder_traversal(root);
     printf("\n");
-    // print_node_details(root);
     char del_choice;
     printf("Do you want to delete nodes from the library? (y/n) ");
     scanf(" %c", &del_choice);
@@ -676,28 +753,76 @@ int main()
     printf("The songs in library are now \n");
     inorder_traversal(root);
     printf("\n");
+
     printf("Library is now customised time to create a playlist you love! \n");
-    char ins_choice;
-    printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
-    scanf(" %c", &ins_choice);
-    while (ins_choice == 'y')
+    return root;
+}
+
+//Function to play the playlist once all wanted songs have been moved into an AVL tree
+//This implements the n,p:k,e feature from Assignment 1
+song_node *play_playlist(song_node *root_avl)
+{
+    printf("Now lets start the playlist and listen to some music! \n");
+    char choice[4];
+    printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+    scanf("%s", &choice);
+    while (1)
     {
-        char ins_song[15];
-        printf("Enter the song you want to enter \n");
-        scanf("%s", &ins_song);
-        song_node *temp_song = search_bst(root, ins_song);
-        if (temp_song == NULL)
+        if (strcmpi(choice, "n") == 0)
         {
-            printf("Sorry but the song is not in the library!\n ");
+            if (root_avl == NULL)
+            {
+                printf("Sorry you've reached the end of playlist\n");
+            }
+            else
+            {
+                song_linked_list_node *new_node = malloc(sizeof(song_linked_list_node));
+                strcpy(new_node->name, get_least(root_avl)->name);
+                root_avl = delete_bst(root_avl, new_node->name, 1);
+                printf("Playing %s \n", new_node->name);
+                insert_stack(new_node);
+                printf("The recent stack is as follows!\n");
+                print_linked_list(recents_stack_top);
+            }
         }
-        else
+        else if (choice[0] == 'p' && choice[1] == ':' && atoi(choice + 2) != 0)
         {
-            root = delete_bst(root, ins_song, 0);
-            root_avl = insert_bst(root_avl, ins_song, 1);
+            int k = atoi(choice + 2);
+            for (unsigned i = 0; i < k; i++)
+            {
+                if (recents_stack_top == NULL)
+                {
+                    printf("Sorry but there weren't %d recent songs\n", k);
+                    break;
+                }
+                else
+                {
+                    song_linked_list_node *popped = delete_stack();
+                    print_linked_list(recents_stack_top);
+                    printf("Playing %s \n", popped->name);
+                    insert_queue(popped);
+                }
+            }
+            printf("The temporary queue is as follows!\n");
+            print_linked_list(temp_queue_front);
+            temp_queue_to_recent_stack();
+            printf("The recent stack is as follows!\n");
+            print_linked_list(recents_stack_top);
         }
-        printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
-        scanf(" %c", &ins_choice);
+        else if (strcmpi(choice, "e") == 0)
+        {
+            printf("Bye!\n");
+            break;
+        }
+        printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+        scanf("%s", &choice);
     }
+    return root_avl;
+}
+
+//This function helps to delete elements from the playlist after creating them
+song_node *del_playlist(song_node *root_avl)
+{
     printf("The songs in the playlist are\n");
     inorder_traversal(root_avl);
     printf("\n");
@@ -721,55 +846,42 @@ int main()
         printf("Do you want to delete more songs from the playlist? (y/n) ");
         scanf(" %c", &del_playlist);
     }
-    print_node_details(root_avl);
-    printf("Now lets start the playlist and listen to some music! \n");
-    char choice[4];
-    printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
-    scanf("%s", &choice);
-    while (1)
+    printf("The current playlist is as follows\n");
+    inorder_traversal(root_avl);
+    printf("\n");
+    return root_avl;
+}
+
+int main()
+{
+    char *songs = read_from_file("songs.txt");
+    song_node *root = NULL;
+    song_node *root_avl = NULL;
+    root = pre_to_bst(root, songs);
+    root = customise_library(root);
+
+    char ins_choice;
+    printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
+    scanf(" %c", &ins_choice);
+    while (ins_choice == 'y')
     {
-        if (strcmpi(choice, "n") == 0)
+        char ins_song[15];
+        printf("Enter the song you want to enter \n");
+        scanf("%s", &ins_song);
+        song_node *temp_song = search_bst(root, ins_song);
+        if (temp_song == NULL)
         {
-            if (root_avl == NULL)
-            {
-                printf("Sorry you've reached the end of playlist\n");
-            }
-            else
-            {
-                song_linked_list_node *new_node = malloc(sizeof(song_linked_list_node));
-                strcpy(new_node->name, get_least(root_avl)->name);
-                root_avl = delete_bst(root_avl, new_node->name, 1);
-                printf("Playing %s \n", new_node->name);
-                recents_stack_top = insert_stack(recents_stack_top, new_node);
-            }
+            printf("Sorry but the song is not in the library!\n ");
         }
-        else if (choice[0] == 'p' && choice[1] == ':' && atoi(choice + 2) != 0)
+        else
         {
-            int k = atoi(choice + 2);
-            for (unsigned i = 0; i < k; i++)
-            {
-                if (recents_stack_top == NULL)
-                {
-                    printf("Sorry but there weren't %d recent songs\n", k);
-                }
-                else
-                {
-                    song_linked_list_node *popped = recents_stack_top;
-                    recents_stack_top = delete_stack(recents_stack_top);
-                    printf("Playing %s \n", popped->name);
-                    insert_queue(temp_queue_front, popped);
-                }
-            }
-            recents_stack_top = temp_queue_to_recent_stack(recents_stack_top, temp_queue_front);
+            root = delete_bst(root, ins_song, 0);
+            root_avl = insert_bst(root_avl, ins_song, 1);
         }
-        else if (strcmpi(choice, "e") == 0)
-        {
-            printf("Bye!\n");
-            break;
-        }
-        printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
-        scanf("%s", &choice);
+        printf("Do you want to insert nodes from the library into the playlist? (y/n) ");
+        scanf(" %c", &ins_choice);
     }
-    // print_node_details(root);
+    root_avl = del_playlist(root_avl);
+    root_avl = play_playlist(root_avl);
     return EXIT_SUCCESS;
 }
