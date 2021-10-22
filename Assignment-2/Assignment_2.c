@@ -1,3 +1,21 @@
+/*
+    Song player(improved) with playlists using stacks and queues and Trees!
+    Copyright (C) 2021 Srivatsan T
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +43,11 @@ typedef struct song_linked_list_node_ song_linked_list_node;
 song_linked_list_node *temp_queue_front = NULL;
 song_linked_list_node *temp_queue_rear = NULL;
 song_linked_list_node *recents_stack_top = NULL;
+
+//Note that in the below delete_stack and delete_queue operations the nodes are not freed
+//The reasoning is that the nodes are reused until the end of the program run from recents stack to temporary queue
+//and get implicitly deleted after program ends While the bst nodes are frees once deleted.
+
 
 // Function to insert into the stack whose top is a global variable
 void insert_stack(song_linked_list_node *new_node)
@@ -723,7 +746,7 @@ void print_node_details(song_node *root)
     printf("\n");
 }
 
-//Function to delete songs from the main library given to us from the .txt file
+// Function to delete songs from the main library given to us from the .txt file
 song_node *customise_library(song_node *root)
 {
     printf("The songs in the library are\n");
@@ -758,97 +781,115 @@ song_node *customise_library(song_node *root)
     return root;
 }
 
-//Function to play the playlist once all wanted songs have been moved into an AVL tree
-//This implements the n,p:k,e feature from Assignment 1
+// Function to play the playlist once all wanted songs have been moved into an AVL tree
+// This implements the n,p:k,e feature from Assignment 1
 song_node *play_playlist(song_node *root_avl)
 {
-    printf("Now lets start the playlist and listen to some music! \n");
-    char choice[4];
-    printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
-    scanf("%s", &choice);
-    while (1)
+    if (root_avl != NULL)
     {
-        if (strcmpi(choice, "n") == 0)
+        printf("Now lets start the playlist and listen to some music! \n");
+        char choice[4];
+        printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+        scanf("%s", &choice);
+        while (root_avl != NULL || recents_stack_top != NULL)
         {
-            if (root_avl == NULL)
+            if (strcmpi(choice, "n") == 0)
             {
-                printf("Sorry you've reached the end of playlist\n");
-            }
-            else
-            {
-                song_linked_list_node *new_node = malloc(sizeof(song_linked_list_node));
-                strcpy(new_node->name, get_least(root_avl)->name);
-                root_avl = delete_bst(root_avl, new_node->name, 1);
-                printf("Playing %s \n", new_node->name);
-                insert_stack(new_node);
-                printf("The recent stack is as follows!\n");
-                print_linked_list(recents_stack_top);
-            }
-        }
-        else if (choice[0] == 'p' && choice[1] == ':' && atoi(choice + 2) != 0)
-        {
-            int k = atoi(choice + 2);
-            for (unsigned i = 0; i < k; i++)
-            {
-                if (recents_stack_top == NULL)
+                if (root_avl == NULL)
                 {
-                    printf("Sorry but there weren't %d recent songs\n", k);
-                    break;
+                    printf("Sorry you've reached the end of playlist\n");
                 }
                 else
                 {
-                    song_linked_list_node *popped = delete_stack();
-                    print_linked_list(recents_stack_top);
-                    printf("Playing %s \n", popped->name);
-                    insert_queue(popped);
+                    song_linked_list_node *new_node = malloc(sizeof(song_linked_list_node));
+                    strcpy(new_node->name, get_least(root_avl)->name);
+                    root_avl = delete_bst(root_avl, new_node->name, 1);
+                    printf("Playing %s \n", new_node->name);
+                    insert_stack(new_node);
+                    // printf("The recent stack is as follows!\n");
+                    // print_linked_list(recents_stack_top);
                 }
             }
-            printf("The temporary queue is as follows!\n");
-            print_linked_list(temp_queue_front);
-            temp_queue_to_recent_stack();
-            printf("The recent stack is as follows!\n");
-            print_linked_list(recents_stack_top);
+            else if (choice[0] == 'p' && choice[1] == ':' && atoi(choice + 2) != 0)
+            {
+                int k = atoi(choice + 2);
+                for (unsigned i = 0; i < k; i++)
+                {
+                    if (recents_stack_top == NULL)
+                    {
+                        printf("Sorry but there weren't %d recent songs\n", k);
+                        break;
+                    }
+                    else
+                    {
+                        song_linked_list_node *popped = delete_stack();
+                        // print_linked_list(recents_stack_top);
+                        printf("Playing %s \n", popped->name);
+                        insert_queue(popped);
+                    }
+                }
+                // printf("The temporary queue is as follows!\n");
+                // print_linked_list(temp_queue_front);
+                temp_queue_to_recent_stack();
+                // printf("The recent stack is as follows!\n");
+                // print_linked_list(recents_stack_top);
+            }
+            else if (strcmpi(choice, "e") == 0)
+            {
+                printf("Bye!\n");
+                break;
+            }
+            else
+            {
+                printf("Enter a proper response from the list n/p:k/e\n");
+            }
+            printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
+            scanf("%s", &choice);
         }
-        else if (strcmpi(choice, "e") == 0)
-        {
-            printf("Bye!\n");
-            break;
-        }
-        printf("Do you want to play next song or n recent songs or end? (n/p:k/e) ");
-        scanf("%s", &choice);
+    }
+    else
+    {
+        printf("\nAnd no point in playing it! Until Next time!\n");
     }
     return root_avl;
 }
 
-//This function helps to delete elements from the playlist after creating them
+// This function helps to delete elements from the playlist after creating them
 song_node *del_playlist(song_node *root_avl)
 {
     printf("The songs in the playlist are\n");
     inorder_traversal(root_avl);
     printf("\n");
-    char del_playlist;
-    printf("Do you want to delete songs from the playlist? (y/n) ");
-    scanf(" %c", &del_playlist);
-    while (del_playlist == 'y')
+    if (root_avl != NULL)
     {
-        char del_song[15];
-        printf("Enter the song you want to delete \n");
-        scanf("%s", &del_song);
-        song_node *temp_song = search_bst(root_avl, del_song);
-        if (temp_song == NULL)
-        {
-            printf("Sorry but the song is not present in the playlist \n");
-        }
-        else
-        {
-            root_avl = delete_bst(root_avl, del_song, 1);
-        }
-        printf("Do you want to delete more songs from the playlist? (y/n) ");
+        char del_playlist;
+        printf("Do you want to delete songs from the playlist? (y/n) ");
         scanf(" %c", &del_playlist);
+        while (del_playlist == 'y')
+        {
+            char del_song[15];
+            printf("Enter the song you want to delete \n");
+            scanf("%s", &del_song);
+            song_node *temp_song = search_bst(root_avl, del_song);
+            if (temp_song == NULL)
+            {
+                printf("Sorry but the song is not present in the playlist \n");
+            }
+            else
+            {
+                root_avl = delete_bst(root_avl, del_song, 1);
+            }
+            printf("Do you want to delete more songs from the playlist? (y/n) ");
+            scanf(" %c", &del_playlist);
+        }
+        printf("The current playlist is as follows\n");
+        inorder_traversal(root_avl);
+        printf("\n");
     }
-    printf("The current playlist is as follows\n");
-    inorder_traversal(root_avl);
-    printf("\n");
+    else
+    {
+        printf("\nThe playlist is empty so no point in deleting from it!\n");
+    }
     return root_avl;
 }
 
