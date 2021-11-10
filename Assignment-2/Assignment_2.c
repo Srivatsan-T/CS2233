@@ -227,7 +227,7 @@ void height_node_to_root(song_node *a)
 
 // Function to perform a ll rotation in an AVL tree with root r
 // and t being the node with imbalance.
-// The function also adjusts the height of the nodes whose heights need adjusting after rotation
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation namely gf,f and s
 song_node *ll_rot(song_node *r, song_node *t)
 {
     song_node *gf = t;
@@ -268,7 +268,7 @@ song_node *ll_rot(song_node *r, song_node *t)
 
 // Function to perform a rr rotation in an AVL tree with root r
 // and t being the node with imbalance.
-// The function also adjusts the height of the nodes whose heights need adjusting after rotation
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation namely gf,f and s
 song_node *rr_rot(song_node *r, song_node *t)
 {
     song_node *gf = t;
@@ -310,7 +310,7 @@ song_node *rr_rot(song_node *r, song_node *t)
 
 // Function to perform a lr rotation in an AVL tree with root r
 // and t being the node with imbalance.
-// The function also adjusts the height of the nodes whose heights need adjusting after rotation
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation namely gf,f and s
 song_node *lr_rot(song_node *r, song_node *t)
 {
     song_node *gf = t;
@@ -360,7 +360,7 @@ song_node *lr_rot(song_node *r, song_node *t)
 
 // Function to perform a rl rotation in an AVL tree with root r
 // and t being the node with imbalance.
-// The function also adjusts the height of the nodes whose heights need adjusting after rotation
+// The function also adjusts the height of the nodes whose heights need adjusting after rotation namely gf,f and s
 song_node *rl_rot(song_node *r, song_node *t)
 {
     song_node *gf = t;
@@ -721,7 +721,7 @@ void temp_queue_to_recent_stack()
 
 // Function to print the node details for all the nodes in a bst.
 // The function isn't used in the main program but can be used for debugging purposes to see if the nodes
-// properly arranged
+// properly arranged as it tries to give a pictorial representation of the bst/AVL tree
 void print_node_details(song_node *root)
 {
     song_node *temp = root;
