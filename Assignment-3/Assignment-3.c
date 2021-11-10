@@ -4,6 +4,7 @@
 #define NO 0
 
 #include <stdio.h>
+#include <stdlib.h>
 
 // Initialising primary and secondary memories
 cell_node primary_memory[t * 2];
@@ -39,6 +40,11 @@ void writeDisk(int i)
     {
         secondary_memory[i][j] = primary_memory[i];
     }
+}
+
+void traverse_bst()
+{
+    
 }
 
 void search_bst(int find_key)
@@ -96,6 +102,31 @@ void insert_bst(int ins_key)
         primary_memory[0].left = NO;
         primary_memory[1].left = NO;
         writeDisk(2 * pres_row_num + 1);
+    }
+}
+
+char *read_from_file(char *file_name)
+{
+    char *file_content = malloc(1000);
+    FILE *fptr;
+    fptr = fopen(file_name, "r");
+    if (fptr != NULL)
+    {
+        fgets(file_content, 1000, fptr);
+    }
+    fclose(fptr);
+    return file_content;
+}
+
+void file_to_function(char *songs_list)
+{
+    char *token = strtok(songs_list, ":");
+    int atoi_token;
+    while (token != NULL)
+    {
+        atoi_token = atoi(token);
+        token = strtok(NULL, ":");
+        insert_bst(atoi_token);
     }
 }
 
