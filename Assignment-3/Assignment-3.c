@@ -244,24 +244,42 @@ int num_nodes_in_row(int row_num)
     }
     return num_nodes;
 }
+
 int sort_row(int row_num, int ins_key)
 {
+
     int i = 0;
-    while (primary_memory[i].key < ins_key)
+    while (primary_memory[i].key < ins_key && primary_memory[i].key != -1)
     {
         i++;
     }
-    for (int j = i; primary_memory[j].key != -1; j++)
+    int j, k;
+    for (j = 0; j < 2 * t; j++)
     {
-        primary_memory[j + 1].key = primary_memory[j].key;
+        if (primary_memory[j].key == -1)
+            break;
     }
+    for (k = j; k >= i; k--)
+    {
+        primary_memory[k + 1].key = primary_memory[k].key;
+    }
+
     primary_memory[i].key = ins_key;
     writeDisk(row_num);
+    /*
+    printf("%d ", i);
+    for (unsigned i = 0; i < 2 * t; i++)
+    {
+        printf("%d :", secondary_memory[0][i].key);
+    }
+    printf("\n");
+    */
     return i;
 }
+
 int leaf_search_btree(int find_key)
 {
-    int pres_row_num = 0;
+    int pres_row_num = btree_root_row;
     readDisk(pres_row_num);
     while (is_leaf(pres_row_num) != YES)
     {
@@ -292,7 +310,7 @@ int key_in_row(int row_num, int find_key)
 
 node_address *search_btree(int find_key)
 {
-    int pres_row_num = 0;
+    int pres_row_num = btree_root_row;
     readDisk(pres_row_num);
     while (key_in_row(pres_row_num, find_key) == 0)
     {
@@ -327,18 +345,17 @@ void spilt_node(int row_num, int new_row_num)
     for (unsigned i = t - 1; i < 2 * t; i++)
     {
         primary_memory[i].key = -1;
+        primary_memory[i].left_node.row_number = -1;
     }
     primary_memory[t - 1].left_node = temp.left_node;
+    writeDisk(row_num);
     readDisk(new_row_num);
-    for (int i = 0; i < t; i++)
+    for (int i = 0; i < t - 1; i++)
     {
         primary_memory[i] = primary_memory[i + 10];
         primary_memory[i].parent_node = temp_parent;
-    }
-    for (unsigned i = 10; i < 2 * t; + i++)
-    {
-        primary_memory[i].key = -1;
-        primary_memory[i].parent_node = temp_parent;
+        primary_memory[i + 10].key = -1;
+        primary_memory[i + 10].left_node.row_number = -1;
     }
     writeDisk(new_row_num);
     if (temp_parent.row_number != -1)
@@ -366,7 +383,7 @@ void spilt_node(int row_num, int new_row_num)
 
 void insert_btree(int ins_key)
 {
-    int pres_row_num = 0;
+    int pres_row_num = btree_root_row;
     readDisk(pres_row_num);
     while (is_leaf(pres_row_num) != YES)
     {
@@ -424,7 +441,7 @@ char *read_from_file(char *file_name)
     return file_content;
 }
 
-void file_to_function(char *keys)
+void file_to_function(char *keys, int data_str_choice)
 {
     char *token = strtok(keys, ":");
     int atoi_token;
@@ -433,8 +450,24 @@ void file_to_function(char *keys)
     {
         atoi_token = atoi(token);
         token = strtok(NULL, ":");
-        insert_bst(atoi_token, row_num);
-        row_num++;
+        if (data_str_choice == 1)
+        {
+            insert_bst(atoi_token, row_num);
+            row_num++;
+        }
+        else if (data_str_choice == 2)
+        {
+            insert_btree(atoi_token);
+            for (unsigned i = 0; i < 6; i++)
+            {
+                for (unsigned j = 0; j < 2 * t; j++)
+                {
+                    printf("%d :", secondary_memory[i][j].key);
+                }
+                printf("\n");
+            }
+            printf("END");
+        }
     }
 }
 
@@ -444,7 +477,7 @@ void prepare_for_bst()
     primary_memory[0].left_node.row_number = primary_memory[1].left_node.row_number = -1;
     primary_memory[0].key = -1;
     writeDisk(0);
-    file_to_function(read_from_file("keys.txt"));
+    file_to_function(read_from_file("keys.txt"), 1);
 
     for (unsigned i = 0; i < 60; i++)
     {
@@ -455,11 +488,27 @@ void prepare_for_bst()
 void prepare_for_btree()
 {
     readDisk(btree_root_row);
-    
+    for (unsigned i = 0; i < 2 * t; i++)
+    {
+        primary_memory[i].key = -1;
+        primary_memory[i].parent_node.row_number = -1;
+        primary_memory[i].left_node.row_number = -1;
+    }
+    writeDisk(btree_root_row);
+    file_to_function(read_from_file("keys.txt"), 2);
+    for (unsigned i = 0; i < 6; i++)
+    {
+        for (unsigned j = 0; j < 2 * t; j++)
+        {
+            printf("%d :", secondary_memory[i][j].key);
+        }
+        printf("\n");
+    }
 }
 
 int main()
 {
-    prepare_for_bst();
+    // prepare_for_bst();
+    prepare_for_btree();
     return 0;
 }
