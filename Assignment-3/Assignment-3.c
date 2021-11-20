@@ -222,14 +222,11 @@ void delete_bst(int del_key)
 int is_leaf(int row_num)
 {
     readDisk(row_num);
-    for (unsigned i = 0; i < 2 * t; i++)
+    if (primary_memory[0].left_node.row_number == -1)
     {
-        if (primary_memory[i].left_node.row_number != -1)
-        {
-            return NO;
-        }
+        return YES;
     }
-    return YES;
+    return NO;
 }
 
 int num_nodes_in_row(int row_num)
@@ -314,12 +311,25 @@ node_address *search_btree(int find_key)
     readDisk(pres_row_num);
     while (key_in_row(pres_row_num, find_key) == 0)
     {
-        for (unsigned i = 0; i < 2 * t - 2; i++)
+        for (unsigned i = 0; i < 2 * t - 1; i++)
         {
             if (primary_memory[i].key < find_key && primary_memory[i + 1].key > find_key)
             {
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
                 readDisk(pres_row_num);
+                //break;
+            }
+            else if (primary_memory[i].key < find_key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                //break;
+            }
+            else if (primary_memory[i].key > find_key)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+                //break;
             }
         }
     }
@@ -328,7 +338,6 @@ node_address *search_btree(int find_key)
     for (unsigned i = 0; i < 2 * t - 1; i++)
     {
         if (primary_memory[i].key == find_key)
-            ;
         {
             add->column_number = i;
         }
@@ -357,7 +366,9 @@ void spilt_node(int row_num, int new_row_num)
         primary_memory[i + 10].key = -1;
         primary_memory[i + 10].left_node.row_number = -1;
     }
+    primary_memory[t - 1].key = primary_memory[t - 1].left_node.row_number = -1;
     writeDisk(new_row_num);
+
     if (temp_parent.row_number != -1)
     {
         readDisk(temp_parent.row_number);
@@ -368,6 +379,19 @@ void spilt_node(int row_num, int new_row_num)
     }
     else
     {
+        readDisk(row_num);
+        for (unsigned i = 0; i < 2 * t; i++)
+        {
+            primary_memory[i].parent_node.row_number = temp_parent.row_number;
+        }
+        writeDisk(row_num);
+        readDisk(new_row_num);
+        for (unsigned i = 0; i < 2 * t; i++)
+        {
+            primary_memory[i].parent_node.row_number = temp_parent.row_number;
+        }
+        writeDisk(new_row_num);
+
         btree_root_row = ++btree_row_num;
         readDisk(btree_root_row);
         for (unsigned i = 0; i < 2 * t; i++)
@@ -377,6 +401,7 @@ void spilt_node(int row_num, int new_row_num)
         primary_memory[0].key = temp.key;
         primary_memory[0].left_node.row_number = row_num;
         primary_memory[1].left_node.row_number = new_row_num;
+        primary_memory[1].key = -1;
         writeDisk(btree_root_row);
     }
 }
@@ -389,12 +414,25 @@ void insert_btree(int ins_key)
     {
         if (num_nodes_in_row(pres_row_num) < 2 * t - 1)
         {
-            for (unsigned i = 0; i < 2 * t - 2; i++)
+            for (unsigned i = 0; i < 2 * t - 1; i++)
             {
                 if (primary_memory[i].key < ins_key && primary_memory[i + 1].key > ins_key)
                 {
                     pres_row_num = primary_memory[i + 1].left_node.row_number;
                     readDisk(pres_row_num);
+                    break;
+                }
+                else if (primary_memory[i].key < ins_key)
+                {
+                    pres_row_num = primary_memory[i + 1].left_node.row_number;
+                    readDisk(pres_row_num);
+                    break;
+                }
+                else if (primary_memory[i].key > ins_key)
+                {
+                    pres_row_num = primary_memory[i].left_node.row_number;
+                    readDisk(pres_row_num);
+                    break;
                 }
             }
         }
@@ -415,18 +453,39 @@ void insert_btree(int ins_key)
     {
         node_address temp_left = primary_memory[0].parent_node;
         spilt_node(pres_row_num, ++btree_row_num);
-        readDisk(temp_left.row_number);
-        for (unsigned i = 0; i < 2 * t - 2; i++)
+        if (temp_left.row_number != -1)
+        {
+            readDisk(temp_left.row_number);
+        }
+        else
+        {
+            readDisk(btree_root_row);
+        }
+        for (unsigned i = 0; i < 2 * t - 1; i++)
         {
             if (primary_memory[i].key < ins_key && primary_memory[i + 1].key > ins_key)
             {
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
                 readDisk(pres_row_num);
+                break;
+            }
+            else if (primary_memory[i].key < ins_key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                break;
+            }
+            else if (primary_memory[i].key > ins_key)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+                break;
             }
         }
         sort_row(pres_row_num, ins_key);
     }
 }
+
 
 char *read_from_file(char *file_name)
 {
@@ -458,7 +517,8 @@ void file_to_function(char *keys, int data_str_choice)
         else if (data_str_choice == 2)
         {
             insert_btree(atoi_token);
-            for (unsigned i = 0; i < 6; i++)
+            /*
+            for (unsigned i = 0; i < 10; i++)
             {
                 for (unsigned j = 0; j < 2 * t; j++)
                 {
@@ -466,7 +526,9 @@ void file_to_function(char *keys, int data_str_choice)
                 }
                 printf("\n");
             }
-            printf("END");
+            printf("Btree root is %d and row_num is %d",btree_root_row,btree_row_num);
+            printf("END\n");
+            */
         }
     }
 }
@@ -496,7 +558,7 @@ void prepare_for_btree()
     }
     writeDisk(btree_root_row);
     file_to_function(read_from_file("keys.txt"), 2);
-    for (unsigned i = 0; i < 6; i++)
+    for (unsigned i = 0; i < 10; i++)
     {
         for (unsigned j = 0; j < 2 * t; j++)
         {
@@ -510,5 +572,6 @@ int main()
 {
     // prepare_for_bst();
     prepare_for_btree();
+    printf("Btree root is %d and row_num is %d", btree_root_row, btree_row_num);
     return 0;
 }
