@@ -44,6 +44,8 @@ void writeDisk(int i)
     }
 }
 
+int btree_row_num = 0;
+int btree_root_row = 0;
 /*
 void traverse_bst(int str_row)
 {
@@ -217,6 +219,198 @@ void delete_bst(int del_key)
     }
 }
 
+int is_leaf(int row_num)
+{
+    readDisk(row_num);
+    for (unsigned i = 0; i < 2 * t; i++)
+    {
+        if (primary_memory[i].left_node.row_number != -1)
+        {
+            return NO;
+        }
+    }
+    return YES;
+}
+
+int num_nodes_in_row(int row_num)
+{
+    readDisk(row_num);
+    int num_nodes = 0;
+    int i = 0;
+    while (primary_memory[i].key != -1)
+    {
+        num_nodes++;
+        i++;
+    }
+    return num_nodes;
+}
+int sort_row(int row_num, int ins_key)
+{
+    int i = 0;
+    while (primary_memory[i].key < ins_key)
+    {
+        i++;
+    }
+    for (int j = i; primary_memory[j].key != -1; j++)
+    {
+        primary_memory[j + 1].key = primary_memory[j].key;
+    }
+    primary_memory[i].key = ins_key;
+    writeDisk(row_num);
+    return i;
+}
+int leaf_search_btree(int find_key)
+{
+    int pres_row_num = 0;
+    readDisk(pres_row_num);
+    while (is_leaf(pres_row_num) != YES)
+    {
+        for (unsigned i = 0; i < 2 * t - 2; i++)
+        {
+            if (primary_memory[i].key < find_key && primary_memory[i + 1].key > find_key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+        }
+    }
+    return pres_row_num;
+}
+
+int key_in_row(int row_num, int find_key)
+{
+    readDisk(row_num);
+    for (unsigned i = 0; i < 2 * t - 1; i++)
+    {
+        if (primary_memory[i].key == find_key)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+node_address *search_btree(int find_key)
+{
+    int pres_row_num = 0;
+    readDisk(pres_row_num);
+    while (key_in_row(pres_row_num, find_key) == 0)
+    {
+        for (unsigned i = 0; i < 2 * t - 2; i++)
+        {
+            if (primary_memory[i].key < find_key && primary_memory[i + 1].key > find_key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+        }
+    }
+    node_address *add = malloc(sizeof(node_address));
+    add->row_number = pres_row_num;
+    for (unsigned i = 0; i < 2 * t - 1; i++)
+    {
+        if (primary_memory[i].key == find_key)
+            ;
+        {
+            add->column_number = i;
+        }
+    }
+    return add;
+}
+
+void spilt_node(int row_num, int new_row_num)
+{
+    readDisk(row_num);
+    cell_node temp = primary_memory[9];
+    node_address temp_parent = primary_memory[9].parent_node;
+    writeDisk(new_row_num);
+    for (unsigned i = t - 1; i < 2 * t; i++)
+    {
+        primary_memory[i].key = -1;
+    }
+    primary_memory[t - 1].left_node = temp.left_node;
+    readDisk(new_row_num);
+    for (int i = 0; i < t; i++)
+    {
+        primary_memory[i] = primary_memory[i + 10];
+        primary_memory[i].parent_node = temp_parent;
+    }
+    for (unsigned i = 10; i < 2 * t; + i++)
+    {
+        primary_memory[i].key = -1;
+        primary_memory[i].parent_node = temp_parent;
+    }
+    writeDisk(new_row_num);
+    if (temp_parent.row_number != -1)
+    {
+        readDisk(temp_parent.row_number);
+        int col = sort_row(temp_parent.row_number, temp.key);
+        primary_memory[col].left_node.row_number = row_num;
+        primary_memory[col + 1].left_node.row_number = new_row_num;
+        writeDisk(temp_parent.row_number);
+    }
+    else
+    {
+        btree_root_row = ++btree_row_num;
+        readDisk(btree_root_row);
+        for (unsigned i = 0; i < 2 * t; i++)
+        {
+            primary_memory[i].parent_node.row_number = -1;
+        }
+        primary_memory[0].key = temp.key;
+        primary_memory[0].left_node.row_number = row_num;
+        primary_memory[1].left_node.row_number = new_row_num;
+        writeDisk(btree_root_row);
+    }
+}
+
+void insert_btree(int ins_key)
+{
+    int pres_row_num = 0;
+    readDisk(pres_row_num);
+    while (is_leaf(pres_row_num) != YES)
+    {
+        if (num_nodes_in_row(pres_row_num) < 2 * t - 1)
+        {
+            for (unsigned i = 0; i < 2 * t - 2; i++)
+            {
+                if (primary_memory[i].key < ins_key && primary_memory[i + 1].key > ins_key)
+                {
+                    pres_row_num = primary_memory[i + 1].left_node.row_number;
+                    readDisk(pres_row_num);
+                }
+            }
+        }
+        else
+        {
+            node_address temp_parent = primary_memory[0].parent_node;
+            spilt_node(pres_row_num, ++btree_row_num);
+            pres_row_num = temp_parent.row_number;
+            readDisk(pres_row_num);
+        }
+    }
+
+    if (num_nodes_in_row(pres_row_num) < 2 * t - 1)
+    {
+        sort_row(pres_row_num, ins_key);
+    }
+    else
+    {
+        node_address temp_left = primary_memory[0].parent_node;
+        spilt_node(pres_row_num, ++btree_row_num);
+        readDisk(temp_left.row_number);
+        for (unsigned i = 0; i < 2 * t - 2; i++)
+        {
+            if (primary_memory[i].key < ins_key && primary_memory[i + 1].key > ins_key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+        }
+        sort_row(pres_row_num, ins_key);
+    }
+}
+
 char *read_from_file(char *file_name)
 {
     char *file_content = malloc(1000);
@@ -230,9 +424,9 @@ char *read_from_file(char *file_name)
     return file_content;
 }
 
-void file_to_function(char *songs_list)
+void file_to_function(char *keys)
 {
-    char *token = strtok(songs_list, ":");
+    char *token = strtok(keys, ":");
     int atoi_token;
     int row_num = 0;
     while (token != NULL)
@@ -244,28 +438,28 @@ void file_to_function(char *songs_list)
     }
 }
 
-int main()
+void prepare_for_bst()
 {
     readDisk(0);
     primary_memory[0].left_node.row_number = primary_memory[1].left_node.row_number = -1;
     primary_memory[0].key = -1;
     writeDisk(0);
     file_to_function(read_from_file("keys.txt"));
-    /*
-    for (int i = 0; i < 60; i++)
+
+    for (unsigned i = 0; i < 60; i++)
     {
-        readDisk(i);
-        printf("%d : ", primary_memory[0].key);
+        printf("%d :", secondary_memory[i][0].key);
     }
-    printf("\n");
-    */
-    delete_bst(17);
-    for (int i = 0; i < 10; i++)
-    {
-        readDisk(i);
-        printf("%d : ", primary_memory[0].key);
-    }
-    printf("\n");
-    // traverse_bst(0);
+}
+
+void prepare_for_btree()
+{
+    readDisk(btree_root_row);
+    
+}
+
+int main()
+{
+    prepare_for_bst();
     return 0;
 }
