@@ -25,7 +25,7 @@ struct cell_node_
 typedef struct cell_node_ cell_node;
 
 // Initialising primary and secondary memories
-cell_node primary_memory[t * 2];
+cell_node primary_memory[t * 4];
 cell_node secondary_memory[MAX_ROWS][t * 2];
 
 void readDisk(int i)
@@ -36,11 +36,35 @@ void readDisk(int i)
     }
 }
 
+void read2(int i, int j)
+{
+    for (unsigned k = 0; k < 2 * t; k++)
+    {
+        primary_memory[k] = secondary_memory[i][k];
+    }
+    for (unsigned k = 2 * t; k < 4 * t; k++)
+    {
+        primary_memory[k] = secondary_memory[j][k - 2 * t];
+    }
+}
+
 void writeDisk(int i)
 {
     for (unsigned j = 0; j < 2 * t; j++)
     {
         secondary_memory[i][j] = primary_memory[j];
+    }
+}
+
+void write2(int i, int j)
+{
+    for (unsigned k = 0; k < 2 * t; k++)
+    {
+        secondary_memory[i][k] = primary_memory[k];
+    }
+    for (unsigned k = 2 * t; k < 4 * t; k++)
+    {
+        secondary_memory[j][k - 2 * t] = primary_memory[k];
     }
 }
 
@@ -252,6 +276,16 @@ int is_leaf(int row_num)
     return NO;
 }
 
+int is_root(int row_num)
+{
+    readDisk(row_num);
+    if (primary_memory[0].parent_node.row_number == -1)
+    {
+        return YES;
+    }
+    return NO;
+}
+
 int num_nodes_in_row(int row_num)
 {
     readDisk(row_num);
@@ -277,7 +311,7 @@ void traverse_btree(int str_row)
     }
     else
     {
-        for (unsigned i = 0; i<= num_nodes_in_row(str_row) ; i++)
+        for (unsigned i = 0; i <= num_nodes_in_row(str_row); i++)
         {
             traverse_btree(primary_memory[i].left_node.row_number);
             readDisk(str_row);
@@ -289,7 +323,53 @@ void traverse_btree(int str_row)
     }
 }
 
-
+// 1 for succ 0 for prede
+int find_pre_succ(int sub_root, int k, int choice)
+{
+    int pres_row_num = sub_root;
+    readDisk(pres_row_num);
+    while (is_leaf(pres_row_num) == NO)
+    {
+        for (unsigned i = 0; i < 2 * t - 1; i++)
+        {
+            if (primary_memory[i].key < k && primary_memory[i + 1].key > k)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                // break;
+            }
+            else if (primary_memory[i].key < k && primary_memory[i + 1].key == -1)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                // break;
+            }
+            else if (primary_memory[i].key > k && i == 0)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+                // break;
+            }
+        }
+    }
+    if (choice == 0)
+    {
+        int num_nodes = num_nodes_in_row(pres_row_num);
+        int res = primary_memory[num_nodes - 2].key;
+        primary_memory[num_nodes - 1] = primary_memory[num_nodes - 2];
+        return res;
+    }
+    else if (choice == 1)
+    {
+        int num_nodes = num_nodes_in_row(pres_row_num);
+        int res = primary_memory[0].key;
+        for (unsigned i = 0; i < 2 * t - 1; i++)
+        {
+            primary_memory[i] = primary_memory[i + 1];
+        }
+        return res;
+    }
+}
 
 int sort_row(int row_num, int ins_key)
 {
@@ -312,14 +392,6 @@ int sort_row(int row_num, int ins_key)
 
     primary_memory[i].key = ins_key;
     writeDisk(row_num);
-    /*
-    printf("%d ", i);
-    for (unsigned i = 0; i < 2 * t; i++)
-    {
-        printf("%d :", secondary_memory[0][i].key);
-    }
-    printf("\n");
-    */
     return i;
 }
 
@@ -368,13 +440,13 @@ node_address *search_btree(int find_key)
                 readDisk(pres_row_num);
                 // break;
             }
-            else if (primary_memory[i].key < find_key)
+            else if (primary_memory[i].key < find_key && primary_memory[i + 1].key == -1)
             {
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
                 readDisk(pres_row_num);
                 // break;
             }
-            else if (primary_memory[i].key > find_key)
+            else if (primary_memory[i].key > find_key && i == 0)
             {
                 pres_row_num = primary_memory[i].left_node.row_number;
                 readDisk(pres_row_num);
@@ -535,136 +607,366 @@ void insert_btree(int ins_key)
     }
 }
 
-void key_from_sibling(int row_num, int sibling_code)
-{
-    readDisk(row_num);
-    readDisk(primary_memory[0].parent_node.row_number);
-    unsigned i, rem_parent;
-    for (i = 0; i < 2 * t; i++)
-    {
-        if (primary_memory[i].left_node.row_number == row_num)
-        {
-            break;
-        }
-        else
-        {
-            i++;
-        }
-    }
-    if (sibling_code == 1)
-    {
-        rem_parent = primary_memory[i].parent_node.row_number;
-        int temp_left = primary_memory[i + 1].left_node.row_number;
-        readDisk(temp_left);
-        cell_node temp = primary_memory[0];
-        for (unsigned i = 0; i < 2 * t - 1; i++)
-        {
-            primary_memory[i] = primary_memory[i + 1];
-        }
-        writeDisk(temp_left);
-        readDisk(rem_parent);
-        int temp_key = primary_memory[i].key;
-        primary_memory[i].key = temp.key;
-        writeDisk(rem_parent);
-        readDisk(row_num);
-        int num_nodes = num_nodes_in_row(row_num);
-        primary_memory[num_nodes - 1].key = temp_key;
-        primary_memory[num_nodes].key = -1;
-        primary_memory[num_nodes].left_node.row_number = temp.left_node.row_number;
-        writeDisk(row_num);
-    }
-    else if (sibling_code == 0)
-    {
-        rem_parent = primary_memory[i - 1].parent_node.row_number;
-        int temp_right = primary_memory[i - 1].left_node.row_number;
-        readDisk(temp_right);
-        cell_node temp = primary_memory[num_nodes_in_row(temp_right) - 2];
-        primary_memory[num_nodes_in_row(temp_right) - 2].key = -1;
-        int far_right = primary_memory[num_nodes_in_row(temp_right) - 2].left_node.row_number;
-        primary_memory[num_nodes_in_row(temp_right) - 2].left_node.row_number = -1;
-        writeDisk(temp_right);
-        readDisk(rem_parent);
-        int temp_key = primary_memory[i - 1].key;
-        primary_memory[i - 1].key = temp.key;
-        writeDisk(rem_parent);
-        readDisk(row_num);
-        int num_nodes = num_nodes_in_row(row_num);
-        for (unsigned i = num_nodes; i >= 0; i--)
-        {
-            primary_memory[i + 1] = primary_memory[i];
-        }
-        primary_memory[0].key = temp_key;
-        primary_memory[0].left_node.row_number = far_right;
-        writeDisk(row_num);
-    }
-}
-
-void merge_nodes()
-{
-}
-
-void remove_element_from_row(int row_num,int ele_key)
+cell_node remove_element_from_row(int row_num, int ele_key)
 {
     readDisk(row_num);
     int i;
-    for(i = 0;i<2*t;i++)
+    for (i = 0; i < 2 * t; i++)
     {
-        if(primary_memory[i].key == ele_key)
+        if (primary_memory[i].key == ele_key)
         {
             break;
         }
     }
-    for(unsigned j = i;j<2*t;j++)
+    cell_node ret = primary_memory[i];
+    for (unsigned j = i; j < 2 * t; j++)
     {
-        primary_memory[j] = primary_memory[j+1];
+        primary_memory[j] = primary_memory[j + 1];
     }
+    writeDisk(row_num);
+    return ret;
+}
+
+void get_from_right_sib(int parent_row, int parent_col, int right_sib, int child_row)
+{
+    readDisk(right_sib);
+    int del_key = primary_memory[0].key;
+    cell_node right_cell = remove_element_from_row(right_sib, del_key);
+    readDisk(parent_row);
+    int parent_key = primary_memory[parent_col].key;
+    primary_memory[parent_col].key = right_cell.key;
+    writeDisk(parent_row);
+    readDisk(child_row);
+    int num_nodes = num_nodes_in_row(child_row);
+    primary_memory[num_nodes].key = parent_key;
+    primary_memory[num_nodes + 1].left_node.row_number = right_cell.left_node.row_number;
+    primary_memory[num_nodes + 1].key = -1;
+    writeDisk(child_row);
+    readDisk(child_row);
+}
+
+void get_from_left_sub(int parent_row, int parent_col, int left_sib, int child_row)
+{
+    readDisk(left_sib);
+    cell_node left_cell;
+    left_cell.key = primary_memory[num_nodes_in_row(left_sib) - 1].key;
+    left_cell.left_node.row_number = primary_memory[num_nodes_in_row(left_sib)].left_node.row_number;
+    primary_memory[num_nodes_in_row(left_sib) - 1].key = -1;
+    writeDisk(left_sib);
+    readDisk(parent_row);
+    int parent_key = primary_memory[parent_col].key;
+    primary_memory[parent_col].key = left_cell.key;
+    writeDisk(parent_row);
+    readDisk(child_row);
+    sort_row(child_row, parent_key);
+    primary_memory[0].left_node.row_number = left_cell.left_node.row_number;
+    writeDisk(child_row);
+    readDisk(child_row);
+}
+
+int merge_with_right(int parent_row, int parent_col, int child_row, int right_sib)
+{
+    readDisk(parent_row);
+    int parent_key = primary_memory[parent_col].key;
+    read2(child_row, right_sib);
+    printf("hello");
+    for (unsigned i = 0; i < 4 * t; i++)
+    {
+        printf("%d : ", primary_memory[i].key);
+    }
+    printf("\n");
+    primary_memory[t - 1].key = parent_key;
+    for (unsigned i = 2 * t; i < 4 * t; i++)
+    {
+        primary_memory[t - i] = primary_memory[i];
+    }
+    writeDisk(right_sib);
+    readDisk(parent_row);
+    if (is_root(parent_row) == YES && num_nodes_in_row(parent_row) == 1)
+    {
+        btree_root_row = right_sib;
+    }
+    remove_element_from_row(parent_row, parent_key);
+    return parent_key;
+}
+
+int merge_with_left(int parent_row, int parent_col, int child_row, int left_sib)
+{
+    readDisk(parent_row);
+    cell_node parent = primary_memory[parent_col];
+    read2(left_sib, child_row);
+    primary_memory[t - 1].key = parent.key;
+    for (unsigned i = 2 * t; i < 4 * t; i++)
+    {
+        primary_memory[t - i] = primary_memory[i];
+    }
+    writeDisk(left_sib);
+    readDisk(parent_row);
+    if (is_root(parent_row) == YES && num_nodes_in_row(parent_row) == 1)
+    {
+        btree_root_row = left_sib;
+    }
+    remove_element_from_row(parent_row, parent.key);
+    primary_memory[parent_col].left_node.row_number = parent.left_node.row_number;
+    return parent.key;
+}
+
+int delete_predecessor(int row_num, int col, int key)
+{
+    readDisk(row_num);
+    int pres_row_num = primary_memory[col].left_node.row_number;
+    readDisk(pres_row_num);
+    while (is_leaf(pres_row_num) != YES)
+    {
+        for (unsigned i = 0; i < 2 * t - 1; i++)
+        {
+            if (primary_memory[i].key < key && primary_memory[i + 1].key > key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+            else if (primary_memory[i].key < key && primary_memory[i + 1].key == -1)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+            else if (primary_memory[i].key > key && i == 0)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+        }
+    }
+    int del_key = primary_memory[num_nodes_in_row(pres_row_num) - 1].key;
+    // delete_btree(del_key);
+    return del_key;
+}
+
+int delete_successor(int row_num, int col, int key)
+{
+    readDisk(row_num);
+    int pres_row_num = primary_memory[col].left_node.row_number;
+    readDisk(pres_row_num);
+    while (is_leaf(pres_row_num) != YES)
+    {
+        for (unsigned i = 0; i < 2 * t - 1; i++)
+        {
+            if (primary_memory[i].key < key && primary_memory[i + 1].key > key)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+            else if (primary_memory[i].key < key && primary_memory[i + 1].key == -1)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+            else if (primary_memory[i].key > key && i == 0)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+            }
+        }
+    }
+    int del_key = primary_memory[0].key;
+    // delete_btree(del_key);
+    return del_key;
+}
+
+int merge_final(int row_num, int left_sib, int right_sib, int parent_key)
+{
+    read2(left_sib, right_sib);
+    primary_memory[t - 1].key = parent_key;
+    for (unsigned i = 2 * t; i < 4 * t; i++)
+    {
+        primary_memory[t - i] = primary_memory[i];
+    }
+    writeDisk(right_sib);
+    readDisk(row_num);
+    if (is_root(row_num) == YES && num_nodes_in_row(row_num) == 1)
+    {
+        btree_root_row = right_sib;
+    }
+    remove_element_from_row(row_num, parent_key);
+    // delete_btree(parent_key);
+    return parent_key;
 }
 
 void delete_btree(int del_key)
 {
     int pres_row_num = btree_root_row;
-    readDisk(pres_row_num);
     while (key_in_row(pres_row_num, del_key) != 1)
     {
-        if (num_nodes_in_row(pres_row_num) >= t)
+        for (unsigned i = 0; i < 2 * t - 1; i++)
         {
-            for (unsigned i = 0; i < 2 * t - 1; i++)
+            if (primary_memory[i].key < del_key && primary_memory[i + 1].key > del_key)
             {
-                if (primary_memory[i].key < del_key && primary_memory[i + 1].key > del_key)
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                break;
+            }
+            else if (primary_memory[i].key < del_key && primary_memory[i + 1].key == -1)
+            {
+                pres_row_num = primary_memory[i + 1].left_node.row_number;
+                readDisk(pres_row_num);
+                break;
+            }
+            else if (primary_memory[i].key > del_key && i == 0)
+            {
+                pres_row_num = primary_memory[i].left_node.row_number;
+                readDisk(pres_row_num);
+                break;
+            }
+        }
+        if (num_nodes_in_row(pres_row_num) < t)
+        {
+            // update pres_row_num to keep loop alive
+            int parent_node = primary_memory[0].parent_node.row_number;
+            int parent_column;
+            readDisk(parent_node);
+            for (parent_column = 0; parent_column < 2 * t; parent_column++)
+            {
+                if (primary_memory[parent_column].left_node.row_number == pres_row_num)
                 {
-                    pres_row_num = primary_memory[i + 1].left_node.row_number;
-                    readDisk(pres_row_num);
-                    break;
-                }
-                else if (primary_memory[i].key < del_key && primary_memory[i+1].key == -1)
-                {
-                    pres_row_num = primary_memory[i + 1].left_node.row_number;
-                    readDisk(pres_row_num);
-                    break;
-                }
-                else if (primary_memory[i].key > del_key && i == 0)
-                {
-                    pres_row_num = primary_memory[i].left_node.row_number;
-                    readDisk(pres_row_num);
                     break;
                 }
             }
-        }
-        else
-        {
-            node_address temp_parent = primary_memory[0].parent_node;
-            pres_row_num = temp_parent.row_number;
-            readDisk(pres_row_num);
+            int right_sib, left_sib;
+            // parent_column now has the child's pointer
+            if (parent_column == 0)
+            {
+                // only right sibling
+                right_sib = primary_memory[parent_column + 1].left_node.row_number;
+                if (num_nodes_in_row(right_sib) >= t)
+                {
+                    // get from right_sib
+                    get_from_right_sib(parent_node, parent_column, right_sib, pres_row_num);
+                }
+                else
+                {
+                    // merge
+
+                    merge_with_right(parent_node, parent_column, primary_memory[parent_column].left_node.row_number, right_sib);
+                    if (is_root(parent_node) == YES && num_nodes_in_row(parent_node) == 0)
+                    {
+                        readDisk(right_sib);
+                    }
+                    else
+                    {
+                        readDisk(parent_node);
+                    }
+                }
+            }
+            else if (parent_column == num_nodes_in_row(parent_node))
+            {
+                // only left sibling
+                left_sib = primary_memory[parent_column - 1].left_node.row_number;
+                if (num_nodes_in_row(left_sib) >= t)
+                {
+                    // get from left
+                    get_from_left_sub(parent_node, parent_column - 1, left_sib, pres_row_num);
+                }
+                else
+                {
+                    // merge
+                    merge_with_left(parent_node, parent_column, primary_memory[parent_column].left_node.row_number, left_sib);
+                    //delete_btree(res);
+                    if (is_root(parent_node) == YES)
+                    {
+                        readDisk(left_sib);
+                    }
+                    else
+                    {
+                        readDisk(parent_node);
+                    }
+                }
+            }
+            else
+            {
+                // 2 siblings
+                left_sib = primary_memory[parent_column - 1].left_node.row_number;
+                right_sib = primary_memory[parent_column + 1].left_node.row_number;
+                if (num_nodes_in_row(left_sib) >= t)
+                {
+                    // get from left
+                    get_from_left_sub(parent_node, parent_column, left_sib, pres_row_num);
+                }
+                else if (num_nodes_in_row(right_sib) >= t)
+                {
+                    // get from right
+                    get_from_right_sib(parent_node, parent_column, right_sib, pres_row_num);
+                }
+                else
+                {
+                    merge_with_right(parent_node, parent_column, primary_memory[parent_column].left_node.row_number, right_sib);
+                    if (is_root(parent_node) == YES && num_nodes_in_row(parent_node) == 0)
+                    {
+                        readDisk(right_sib);
+                    }
+                    else
+                    {
+                        readDisk(parent_node);
+                    }
+                    // merge
+                }
+            }
         }
     }
-    //Now the row contains the node to delete...check underflow and delete accordingly
-    if(is_leaf(pres_row_num) == YES)
+    // now the pres_row_num has the desired element
+
+    if (is_leaf(pres_row_num) == YES)
     {
-        remove_element_from_row(pres_row_num,del_key);
+        remove_element_from_row(pres_row_num, del_key);
     }
     else
     {
-
+        int del_node_column;
+        for (del_node_column = 0; del_node_column < 2 * t; del_node_column++)
+        {
+            if (primary_memory[del_node_column].key == del_key)
+            {
+                break;
+            }
+        }
+        int del_node_left = primary_memory[del_node_column].left_node.row_number;
+        int del_node_right = primary_memory[del_node_column + 1].left_node.row_number;
+        if (num_nodes_in_row(del_node_left) >= t)
+        {
+            // delete predecessor key in left subtree
+            readDisk(pres_row_num);
+            int del = delete_predecessor(pres_row_num, del_node_column, del_key);
+            delete_btree(del);
+            readDisk(pres_row_num);
+            primary_memory[del_node_column].key = del;
+            writeDisk(pres_row_num);
+            readDisk(pres_row_num);
+        }
+        else if (num_nodes_in_row(del_node_right) >= t)
+        {
+            // delete successor key in right subtree
+            readDisk(pres_row_num);
+            int del = delete_predecessor(pres_row_num, del_node_column + 1, del_key);
+            delete_btree(del);
+            readDisk(pres_row_num);
+            primary_memory[del_node_column].key = del;
+            writeDisk(pres_row_num);
+            readDisk(pres_row_num);
+        }
+        else
+        {
+            // merger
+            delete_btree(del_key);
+            readDisk(pres_row_num);
+            merge_final(pres_row_num, del_node_left, del_node_right, del_key);
+            if (is_root(pres_row_num) == YES)
+            {
+                readDisk(del_node_right);
+            }
+            else
+            {
+                readDisk(pres_row_num);
+            }
+        }
     }
 }
 
@@ -735,6 +1037,7 @@ void prepare_for_bst()
     delete_bst(38);
     delete_bst(58);
     traverse_bst(0);
+    printf("BST END\n");
 }
 
 void prepare_for_btree()
@@ -748,13 +1051,81 @@ void prepare_for_btree()
     }
     writeDisk(btree_root_row);
     file_to_function(read_from_file("keys.txt"), 2);
+    for (unsigned i = 0; i < 10; i++)
+    {
+        for (unsigned j = 0; j < 2 * t; j++)
+        {
+            printf("%d :", secondary_memory[i][j].key);
+        }
+        printf("\n");
+    }
+    printf("End\n");
+    for (unsigned i = 0; i < 10; i++)
+    {
+        for (unsigned j = 0; j < 2 * t; j++)
+        {
+            printf("%d :", secondary_memory[i][j].key);
+        }
+        printf("\n");
+    }
+    // traverse_btree(btree_root_row);
+    printf("\n");
+    /*
+    delete_btree(13);
+    delete_btree(19);
+    delete_btree(24);
+    delete_btree(37);
+    delete_btree(43);
+    delete_btree(53);
+    delete_btree(18);
+    delete_btree(38);
+    delete_btree(58);
+    */
+    delete_btree(17);
+    delete_btree(36);
+    delete_btree(60);
+    delete_btree(59);
+    delete_btree(58);
+    delete_btree(1);
+    delete_btree(2);
+    delete_btree(3);
+    delete_btree(4);
+    delete_btree(5);
+    delete_btree(6);
+    delete_btree(7);
+    delete_btree(19);
+    delete_btree(20);
+    delete_btree(21);
+    delete_btree(22);
+    delete_btree(23);
+    delete_btree(24);
+    delete_btree(25);
+    delete_btree(37);
+    delete_btree(38);
+    for (unsigned i = 0; i < 10; i++)
+    {
+        for (unsigned j = 0; j < 2 * t; j++)
+        {
+            printf("%d :", secondary_memory[i][j].key);
+        }
+        printf("\n");
+    }
+    printf("\n");
+    delete_btree(26);
+    for (unsigned i = 0; i < 10; i++)
+    {
+        for (unsigned j = 0; j < 2 * t; j++)
+        {
+            printf("%d :", secondary_memory[i][j].key);
+        }
+        printf("\n");
+    }
     traverse_btree(btree_root_row);
-    
 }
 
 int main()
 {
-    prepare_for_bst();
+    // prepare_for_bst();
     prepare_for_btree();
     return 0;
 }
