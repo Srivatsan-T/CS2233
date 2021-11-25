@@ -7,13 +7,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-//global variables to record the read_cost,write_cost and primart_access_costs
+/*
+*
+*
+*
+*The bst implementation takes around 10-15 seconds to run and produce results. Feel free to wait out the time.
+*It further proves the point that bst are unsuitable for these number of keys.
+*
+*
+*
+*/
+
+// global variables to record the read_cost,write_cost and primart_access_costs
 int read_cost;
 int write_cost;
 int primary_access_cost;
 
-//struct to store row and column as address for a node's left child
-//or parent
+// struct to store row and column as address for a node's left child
+// or parent
 struct addressing_nodes_
 {
     int row_number;
@@ -22,8 +33,8 @@ struct addressing_nodes_
 
 typedef struct addressing_nodes_ node_address;
 
-//struct to store the key,left address and right address of a node
-//contains an integer and 2 node_address elements.
+// struct to store the key,left address and right address of a node
+// contains an integer and 2 node_address elements.
 struct cell_node_
 {
     node_address left_node;
@@ -34,11 +45,11 @@ struct cell_node_
 typedef struct cell_node_ cell_node;
 
 // Initialising primary and secondary memories of sizes 4*t and [MAX_ROWS][2t] respectively
-//The primary memory can contain 2 rows of secondary memory at a time.
+// The primary memory can contain 2 rows of secondary memory at a time.
 cell_node primary_memory[t * 4];
 cell_node secondary_memory[MAX_ROWS][t * 2];
 
-//Function to read the i'th row of secondary memory array and store in first 2*t cells of primary
+// Function to read the i'th row of secondary memory array and store in first 2*t cells of primary
 void readDisk(int i)
 {
     for (unsigned j = 0; j < 2 * t; j++)
@@ -48,7 +59,7 @@ void readDisk(int i)
     read_cost += 10;
 }
 
-//Function to read the i'th and j'th rows of secondary memory and store in 4*t cells of primary
+// Function to read the i'th and j'th rows of secondary memory and store in 4*t cells of primary
 void read2(int i, int j)
 {
     for (unsigned k = 0; k < 2 * t; k++)
@@ -62,7 +73,7 @@ void read2(int i, int j)
     read_cost += 10;
 }
 
-//Function to write the primary memory's first 2*t cells into i'th row of secondary memory.
+// Function to write the primary memory's first 2*t cells into i'th row of secondary memory.
 void writeDisk(int i)
 {
     for (unsigned j = 0; j < 2 * t; j++)
@@ -72,7 +83,7 @@ void writeDisk(int i)
     write_cost += 10;
 }
 
-//Function to write the primary memory into 2 rows i and j of the secondary memory.
+// Function to write the primary memory into 2 rows i and j of the secondary memory.
 void write2(int i, int j)
 {
     for (unsigned k = 0; k < 2 * t; k++)
@@ -86,12 +97,12 @@ void write2(int i, int j)
     write_cost += 10;
 }
 
-//Creating a global variable to keep track of the root row of btree and the last occupied row
-//of btree in secondary memory
+// Creating a global variable to keep track of the root row of btree and the last occupied row
+// of btree in secondary memory
 int btree_row_num = 0;
 int btree_root_row = 0;
 
-//Function to traverse bst using recursion
+// Function to traverse bst using recursion
 void traverse_bst(int str_row)
 {
     readDisk(str_row);
@@ -105,7 +116,7 @@ void traverse_bst(int str_row)
         primary_access_cost++;
         printf("%d : ", primary_memory[0].key);
         traverse_bst(primary_memory[1].left_node.row_number);
-        //We have to restore the primary memory here since the recursive call tampers with the primary memory
+        // We have to restore the primary memory here since the recursive call tampers with the primary memory
         readDisk(str_row);
     }
     else if (primary_memory[1].left_node.row_number == -1)
@@ -125,9 +136,9 @@ void traverse_bst(int str_row)
     }
 }
 
-//Function to search for an element in a bst
-//The function goes through the tree and returns the row number of the corresponding
-//element where it's found.
+// Function to search for an element in a bst
+// The function goes through the tree and returns the row number of the corresponding
+// element where it's found.
 int search_bst(int find_key)
 {
     readDisk(0);
@@ -151,7 +162,7 @@ int search_bst(int find_key)
     return pres_row_num;
 }
 
-//Function to insert elements into the bst
+// Function to insert elements into the bst
 void insert_bst(int ins_key, int row_num)
 {
     readDisk(0);
@@ -220,9 +231,9 @@ void insert_bst(int ins_key, int row_num)
     }
 }
 
-//Function to find successor of a key in a given btree
-//The function traverses the right subtree and keeps going 
-//left to find the smallest key in the subtree
+// Function to find successor of a key in a given btree
+// The function traverses the right subtree and keeps going
+// left to find the smallest key in the subtree
 int find_successor(int find_key)
 {
     int succ_row;
@@ -239,7 +250,7 @@ int find_successor(int find_key)
     return succ_row;
 }
 
-
+// Function to delete an element from a given bst
 void delete_bst(int del_key)
 {
     int row = search_bst(del_key);
@@ -329,6 +340,8 @@ void delete_bst(int del_key)
     }
 }
 
+// Function to test if a given row corresponds to a leaf node in a btree
+// The function tests if the left subtree of the first key is nil
 int is_leaf(int row_num)
 {
     readDisk(row_num);
@@ -340,6 +353,8 @@ int is_leaf(int row_num)
     return NO;
 }
 
+// Function to test if a given row corresponds to a root node in a btree
+// The function tests if the parent of the first key is nil
 int is_root(int row_num)
 {
     readDisk(row_num);
@@ -351,6 +366,8 @@ int is_root(int row_num)
     return NO;
 }
 
+// Function to return the number of keys present in a given row
+// It iterates through the keys till it encounters a -1 key
 int num_nodes_in_row(int row_num)
 {
     int num_nodes = 0;
@@ -365,6 +382,7 @@ int num_nodes_in_row(int row_num)
     return num_nodes;
 }
 
+// Function to traverse a given btree and print all its elements in in orderly manner
 void traverse_btree(int str_row)
 {
     if (is_leaf(str_row) == YES)
@@ -393,6 +411,9 @@ void traverse_btree(int str_row)
     }
 }
 
+//Function to insert ins_key in the row row_num and sorts it in place
+//It creats a vacant node and defines its key as ins_key.
+//Point to be noted is that the left address is NULL for this new node.
 int sort_row(int row_num, int ins_key)
 {
     int i = 0;
@@ -420,6 +441,8 @@ int sort_row(int row_num, int ins_key)
     return i;
 }
 
+// Function to test if the key find_key exists in row_num row.
+// Returns 1 if exists else returns 0
 int key_in_row(int row_num, int find_key)
 {
     readDisk(row_num);
@@ -434,6 +457,9 @@ int key_in_row(int row_num, int find_key)
     return 0;
 }
 
+// Function to search for an element in the btree
+// Loops through the btree and finds the row and column of the element if present
+// Stores it in a node_address pointer and returns it.
 node_address *search_btree(int find_key)
 {
     int pres_row_num = btree_root_row;
@@ -447,19 +473,16 @@ node_address *search_btree(int find_key)
             {
                 primary_access_cost++;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key < find_key && primary_memory[i + 1].key == -1)
             {
                 primary_access_cost += 3;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key > find_key && i == 0)
             {
                 primary_access_cost += 2;
                 pres_row_num = primary_memory[i].left_node.row_number;
-                // readDisk(pres_row_num);
             }
         }
     }
@@ -477,6 +500,9 @@ node_address *search_btree(int find_key)
     return add;
 }
 
+//The function splits the row row_num into 2 halves and stores one half in new_row_num
+//and keys of the remaining half becomes -1
+//It alters the parent pointer of elements in new_row_num accordingly.
 void spilt_node(int row_num, int new_row_num)
 {
     primary_access_cost++;
@@ -547,6 +573,9 @@ void spilt_node(int row_num, int new_row_num)
     }
 }
 
+// Function to insert a element ins_key in the btree.
+//It does a single pass meaning it checks if the node overflows in advance
+//before traversing it fixes it and moves on to next step.
 void insert_btree(int ins_key)
 {
     int pres_row_num = btree_root_row;
@@ -561,21 +590,18 @@ void insert_btree(int ins_key)
                 {
                     primary_access_cost++;
                     pres_row_num = primary_memory[i + 1].left_node.row_number;
-                    // readDisk(pres_row_num);
                     break;
                 }
                 else if (primary_memory[i].key < ins_key && primary_memory[i + 1].key == -1)
                 {
                     primary_access_cost += 3;
                     pres_row_num = primary_memory[i + 1].left_node.row_number;
-                    // readDisk(pres_row_num);
                     break;
                 }
                 else if (primary_memory[i].key > ins_key && i == 0)
                 {
                     primary_access_cost += 2;
                     pres_row_num = primary_memory[i].left_node.row_number;
-                    // readDisk(pres_row_num);
                     break;
                 }
             }
@@ -589,7 +615,7 @@ void insert_btree(int ins_key)
             readDisk(pres_row_num);
         }
     }
-
+    //Insertion is done at the leaf so checking leaf for overflow and splitting node if it does
     if (num_nodes_in_row(pres_row_num) < 2 * t - 1)
     {
         sort_row(pres_row_num, ins_key);
@@ -636,6 +662,9 @@ void insert_btree(int ins_key)
     }
 }
 
+// Function to remove an element ele_key from the row row_num
+// The function removes the key and corresponding left child address from the row.
+// Returns the node
 cell_node remove_element_from_row(int row_num, int ele_key)
 {
     readDisk(row_num);
@@ -658,6 +687,10 @@ cell_node remove_element_from_row(int row_num, int ele_key)
     return ret;
 }
 
+//Function to get a node from the right sibling of a row child_row
+//Gets the first element from right_sib and deletes it from that row
+//It then send the element to the parent_row's parent's col position and gets that element
+//to the child_row to prevent underflow
 void get_from_right_sib(int parent_row, int parent_col, int right_sib, int child_row)
 {
     primary_access_cost += 6;
@@ -677,6 +710,10 @@ void get_from_right_sib(int parent_row, int parent_col, int right_sib, int child
     readDisk(child_row);
 }
 
+//Function to get a node from the left sibling of a row child_row
+//Gets the last element from left_sib and deletes it from that row
+//It then send the element to the parent_row's parent's col position and gets that element
+//to the child_row to prevent underflow
 void get_from_left_sub(int parent_row, int parent_col, int left_sib, int child_row)
 {
     primary_access_cost += 6;
@@ -697,6 +734,7 @@ void get_from_left_sub(int parent_row, int parent_col, int left_sib, int child_r
     readDisk(child_row);
 }
 
+//Function to merge child_rows's element into right_sib's element to prevent underflow during deletion
 int merge_with_right(int parent_row, int parent_col, int child_row, int right_sib)
 {
     readDisk(parent_row);
@@ -741,6 +779,7 @@ int merge_with_right(int parent_row, int parent_col, int child_row, int right_si
     return parent_key;
 }
 
+//Function to merge child_rows's element into left_sib's element to prevent underflow during deletion
 int merge_with_left(int parent_row, int parent_col, int child_row, int left_sib)
 {
     readDisk(parent_row);
@@ -795,12 +834,12 @@ int merge_with_left(int parent_row, int parent_col, int child_row, int left_sib)
     return parent.key;
 }
 
+//Function to find predecessor of a key in the btree and returns it;
 int delete_predecessor(int row_num, int col, int key)
 {
     readDisk(row_num);
     primary_access_cost++;
     int pres_row_num = primary_memory[col].left_node.row_number;
-    // readDisk(pres_row_num);
     while (is_leaf(pres_row_num) != YES)
     {
         for (unsigned i = 0; i < 2 * t - 1; i++)
@@ -810,19 +849,16 @@ int delete_predecessor(int row_num, int col, int key)
             {
                 primary_access_cost++;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key < key && primary_memory[i + 1].key == -1)
             {
                 primary_access_cost += 3;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key > key && i == 0)
             {
                 primary_access_cost += 2;
                 pres_row_num = primary_memory[i].left_node.row_number;
-                // readDisk(pres_row_num);
             }
         }
     }
@@ -831,12 +867,12 @@ int delete_predecessor(int row_num, int col, int key)
     return del_key;
 }
 
+//Function to return the successor of a key in the btree and returns it
 int delete_successor(int row_num, int col, int key)
 {
     readDisk(row_num);
     primary_access_cost++;
     int pres_row_num = primary_memory[col].left_node.row_number;
-    // readDisk(pres_row_num);
     while (is_leaf(pres_row_num) != YES)
     {
         for (unsigned i = 0; i < 2 * t - 1; i++)
@@ -846,19 +882,16 @@ int delete_successor(int row_num, int col, int key)
             {
                 primary_access_cost++;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key < key && primary_memory[i + 1].key == -1)
             {
                 primary_access_cost += 3;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
             }
             else if (primary_memory[i].key > key && i == 0)
             {
                 primary_access_cost += 2;
-                pres_row_num = primary_memory[i].left_node.row_number;
-                // readDisk(pres_row_num);
+                pres_row_num = primary_memory[i].left_node.row_number; 
             }
         }
     }
@@ -867,6 +900,7 @@ int delete_successor(int row_num, int col, int key)
     return del_key;
 }
 
+//The function merges left_sib and right_sib and writes it in right_sib and includes the parent_key in it.
 int merge_final(int row_num, int left_sib, int right_sib, int parent_key)
 {
     read2(left_sib, right_sib);
@@ -893,6 +927,9 @@ int merge_final(int row_num, int left_sib, int right_sib, int parent_key)
     return parent_key;
 }
 
+//Function to delete element del_key from the btree
+//It takes care of underflows in traversals and borrowes from siblings
+//and merges the nodes if both the siblings underflow
 void delete_btree(int del_key)
 {
     int pres_row_num = btree_root_row;
@@ -905,21 +942,18 @@ void delete_btree(int del_key)
             {
                 primary_access_cost++;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
                 break;
             }
             else if (primary_memory[i].key < del_key && primary_memory[i + 1].key == -1)
             {
                 primary_access_cost += 3;
                 pres_row_num = primary_memory[i + 1].left_node.row_number;
-                // readDisk(pres_row_num);
                 break;
             }
             else if (primary_memory[i].key > del_key && i == 0)
             {
                 primary_access_cost += 2;
                 pres_row_num = primary_memory[i].left_node.row_number;
-                // readDisk(pres_row_num);
                 break;
             }
         }
@@ -1093,6 +1127,7 @@ void delete_btree(int del_key)
     }
 }
 
+// Function to read the contents from the keys file and stores in a char* file and returns it
 char *read_from_file(char *file_name)
 {
     char *file_content = malloc(1000);
@@ -1106,6 +1141,9 @@ char *read_from_file(char *file_name)
     return file_content;
 }
 
+// Function to access the char* returned by read_from_file and splits it with delimeter ":"
+// and returns the individual keys and converts into integer
+// It then decides to insert it into btree or bst using data_str_choice
 void file_to_function(char *keys, int data_str_choice)
 {
     char *token = strtok(keys, ":");
@@ -1127,6 +1165,9 @@ void file_to_function(char *keys, int data_str_choice)
     }
 }
 
+// Function to prepare the setup and insert,search and delete the said keys from the
+// given keys list. It also initialises read_costs and calculates individual costs for
+// insertion,search and deletion and traverses the bst
 void prepare_for_bst()
 {
     read_cost = write_cost = primary_access_cost = 0;
@@ -1166,6 +1207,9 @@ void prepare_for_bst()
     printf("\n");
 }
 
+// Function to prepare the setup and insert,search and delete the said keys from the
+// given keys list. It also initialises read_costs and calculates individual costs for
+// insertion,search and deletion and traverses the btree
 void prepare_for_btree()
 {
     read_cost = write_cost = primary_access_cost = 0;
@@ -1201,7 +1245,6 @@ void prepare_for_btree()
     printf("The node %d is at row %d and column %d\n", 35, add->row_number, add->column_number);
     add = search_btree(59);
     printf("The node %d is at row %d and column %d\n", 59, add->row_number, add->column_number);
-
     printf("The cost for btree search is %d\n", read_cost + write_cost + primary_access_cost);
     read_cost = write_cost = primary_access_cost = 0;
     delete_btree(13);
